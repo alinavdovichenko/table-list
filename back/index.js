@@ -1,5 +1,5 @@
-const express = require('express');
-const cors = require('cors');
+import express from 'express';
+import cors from 'cors';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -7,40 +7,36 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
-// Временное хранилище
 let state = {
   selected: [],
   order: [],
 };
 
-// Элементы (тестово от 1 до 1_000_000)
 const items = Array.from({ length: 1_000_000 }, (_, i) => i + 1);
 
-// Возврат порции данных
 app.get('/items', (req, res) => {
   const { offset = 0, limit = 20, search = '' } = req.query;
-  let filtered = items;
 
+  let filtered = items;
   if (search) {
     filtered = filtered.filter(i => i.toString().includes(search));
   }
 
-  const ordered = state.order.length ? state.order : filtered;
+  const ordered = state.order.length ? state.order.filter(i => filtered.includes(i)) : filtered;
+  const paged = ordered.slice(Number(offset), Number(offset) + Number(limit));
 
   res.json({
-    items: ordered.slice(Number(offset), Number(offset) + Number(limit)),
+    items: paged,
     total: filtered.length,
-    selected: state.selected,
+    selected: state.selected
   });
 });
 
-// Сохранение выбора
 app.post('/select', (req, res) => {
   state.selected = req.body.selected || [];
   res.sendStatus(200);
 });
 
-// Сохранение порядка
 app.post('/order', (req, res) => {
   state.order = req.body.order || [];
   res.sendStatus(200);
