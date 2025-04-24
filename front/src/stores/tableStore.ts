@@ -23,7 +23,7 @@ class TableStore {
 
   async fetchItems(reset = false) {
     if (this.isLoading) return;
-    if (!reset && this.items.length >= this.total) return; // ✅ Проверка на завершение загрузки
+    if (!reset && this.items.length >= this.total) return;
 
     this.isLoading = true;
     const currentOffset = reset ? 0 : this.offset;
@@ -38,12 +38,9 @@ class TableStore {
       });
 
       runInAction(() => {
-        if (reset) {
-          this.items = res.data.items;
-        } else {
-          this.items.push(...res.data.items);
-        }
+        const newItems = res.data.items.filter(id => !this.items.includes(id));
 
+        this.items = reset ? newItems : [...this.items, ...newItems];
         this.total = res.data.total;
         this.selected = res.data.selected;
         this.offset = currentOffset + this.limit;
@@ -54,24 +51,6 @@ class TableStore {
       runInAction(() => {
         this.isLoading = false;
       });
-    }
-  }
-
-  async updateSelection(selected: number[]) {
-    try {
-      this.selected = selected;
-      await API.post('/select', { selected });
-    } catch (error) {
-      console.error('Ошибка при обновлении выбранных элементов:', error);
-    }
-  }
-
-  async updateOrder(order: number[]) {
-    try {
-      this.order = order;
-      await API.post('/order', { order });
-    } catch (error) {
-      console.error('Ошибка при обновлении порядка элементов:', error);
     }
   }
 
@@ -89,8 +68,25 @@ class TableStore {
   }
 
   deselectItem(id: number) {
-    this.selected = this.selected.filter((item) => item !== id);
+    this.selected = this.selected.filter(i => i !== id);
     this.updateSelection(this.selected);
+  }
+
+  async updateSelection(selected: number[]) {
+    try {
+      await API.post('/select', { selected });
+    } catch (error) {
+      console.error('Ошибка при обновлении выбранных элементов:', error);
+    }
+  }
+
+  async updateOrder(order: number[]) {
+    try {
+      this.order = order;
+      await API.post('/order', { order });
+    } catch (error) {
+      console.error('Ошибка при обновлении порядка элементов:', error);
+    }
   }
 
   setOrder(newOrder: number[]) {

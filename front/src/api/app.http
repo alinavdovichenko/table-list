@@ -1,0 +1,14 @@
+# 1. Получение данных
+GET https://table-list.onrender.com/items HTTP/1.1
+
+###
+
+# 2. Получение данных о домах
+GET https://ecrz-back.onrender.com/houses HTTP/1.1
+
+###
+
+# 3. Получение фильтров для квартир
+GET https://ecrz-back.onrender.com/apartments/filters HTTP/1.1
+
+###

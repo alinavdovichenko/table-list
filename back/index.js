@@ -31,7 +31,10 @@ app.get('/items', (req, res) => {
     filtered = filtered.filter(i => i.toString().includes(search));
   }
 
-  const ordered = state.order.length ? state.order.filter(i => filtered.includes(i)) : filtered;
+  const ordered =
+  state.order.length && filtered.some(i => state.order.includes(i))
+    ? state.order.filter(i => filtered.includes(i))
+    : filtered;
   const paged = ordered.slice(Number(offset), Number(offset) + Number(limit));
 
   res.json({
