@@ -90,7 +90,6 @@ class TableStore {
   }
 
   setOrder(newOrder: number[]) {
-    this.items = newOrder;
     this.updateOrder(newOrder);
   }
 }

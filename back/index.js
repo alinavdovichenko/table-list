@@ -40,7 +40,8 @@ app.get('/items', (req, res) => {
   res.json({
     items: paged,
     total: filtered.length,
-    selected: state.selected
+    selected: state.selected,
+    order: state.order
   });
 });
 

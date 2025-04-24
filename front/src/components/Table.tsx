@@ -29,6 +29,7 @@ export const Table: React.FC = observer(() => {
 
   const handleSearch = () => {
     store.setSearch(searchValue.trim());
+    store.setOrder(store.items);
   };
 
   return (
