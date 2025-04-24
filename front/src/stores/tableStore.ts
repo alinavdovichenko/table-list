@@ -40,7 +40,11 @@ class TableStore {
       runInAction(() => {
         const newItems = res.data.items.filter(id => !this.items.includes(id));
 
-        this.items = reset ? newItems : [...this.items, ...newItems];
+        if (reset) {
+            this.setOrder(newItems, false); // ← Не отправляем на сервер, просто синхронизируем локально
+          } else {
+            this.items = [...this.items, ...newItems];
+          }
         this.total = res.data.total;
         this.selected = res.data.selected;
         this.offset = currentOffset + this.limit;
@@ -89,10 +93,13 @@ class TableStore {
     }
   }
 
-  setOrder(newOrder: number[]) {
+  setOrder(newOrder: number[], syncServer = true) {
     this.items = newOrder;
-    this.updateOrder(newOrder);
-  }
+    this.order = newOrder;
+    if (syncServer) {
+      this.updateOrder(newOrder);
+    }
+  }  
 }
 
 const store = new TableStore();
