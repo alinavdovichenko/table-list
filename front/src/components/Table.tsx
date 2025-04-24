@@ -1,13 +1,9 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { observer } from 'mobx-react-lite';
 import store from '../stores/tableStore';
 import { ItemRow } from './ItemRow';
-import {
-  DragDropContext,
-  Droppable,
-  Draggable,
-  DropResult,
-} from '@hello-pangea/dnd';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
+import debounce from 'lodash.debounce';
 
 export const Table = observer(() => {
   useEffect(() => {
@@ -18,7 +14,11 @@ export const Table = observer(() => {
       const windowHeight = window.innerHeight;
       const fullHeight = document.documentElement.scrollHeight;
 
-      if (scrollTop + windowHeight >= fullHeight - 100) {
+      if (
+        scrollTop + windowHeight >= fullHeight - 100 &&
+        !store.isLoading &&
+        store.items.length < store.total
+      ) {
         store.fetchItems();
       }
     };
@@ -26,6 +26,12 @@ export const Table = observer(() => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // 🧠 debounce обёрнут в useMemo, чтобы не пересоздавался при каждом рендере
+  const debouncedSearch = useMemo(
+    () => debounce((value: string) => store.setSearch(value), 300),
+    []
+  );
 
   const handleDragEnd = (result: DropResult) => {
     if (!result.destination) return;
@@ -44,17 +50,13 @@ export const Table = observer(() => {
         className="search"
         type="text"
         placeholder="Поиск..."
-        value={store.search}
-        onChange={(e) => store.setSearch(e.target.value)}
+        defaultValue={store.search}
+        onChange={(e) => debouncedSearch(e.target.value)}
       />
       <DragDropContext onDragEnd={handleDragEnd}>
         <Droppable droppableId="list">
           {(provided) => (
-            <div
-              className="list"
-              ref={provided.innerRef}
-              {...provided.droppableProps}
-            >
+            <div className="list-container" ref={provided.innerRef} {...provided.droppableProps}>
               {store.items.map((item, index) => (
                 <Draggable key={item} draggableId={String(item)} index={index}>
                   {(provided, snapshot) => (
@@ -73,6 +75,7 @@ export const Table = observer(() => {
                 </Draggable>
               ))}
               {provided.placeholder}
+              {store.isLoading && <div className="loader" />}
             </div>
           )}
         </Droppable>

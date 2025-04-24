@@ -21,13 +21,11 @@ class TableStore {
     makeAutoObservable(this);
   }
 
-  // Функция для подгрузки элементов с сервера
   async fetchItems(reset = false) {
     if (this.isLoading) return;
+    if (!reset && this.items.length >= this.total) return; // ✅ Проверка на завершение загрузки
 
     this.isLoading = true;
-
-    // Определение смещения для запроса
     const currentOffset = reset ? 0 : this.offset;
 
     try {
@@ -35,25 +33,23 @@ class TableStore {
         params: {
           offset: currentOffset,
           limit: this.limit,
-          search: this.search
-        }
+          search: this.search,
+        },
       });
 
       runInAction(() => {
-        // Если выполняется сброс, перезаписываем элементы
         if (reset) {
           this.items = res.data.items;
         } else {
           this.items.push(...res.data.items);
         }
 
-        // Обновляем другие состояния
         this.total = res.data.total;
         this.selected = res.data.selected;
-        this.offset = currentOffset + this.limit; // Обновляем offset
+        this.offset = currentOffset + this.limit;
       });
     } catch (error) {
-      console.error("Ошибка при загрузке данных:", error);
+      console.error('Ошибка при загрузке данных:', error);
     } finally {
       runInAction(() => {
         this.isLoading = false;
@@ -61,45 +57,40 @@ class TableStore {
     }
   }
 
-  // Обновление состояния выбранных элементов на сервере
   async updateSelection(selected: number[]) {
     try {
       this.selected = selected;
       await API.post('/select', { selected });
     } catch (error) {
-      console.error("Ошибка при обновлении выбранных элементов:", error);
+      console.error('Ошибка при обновлении выбранных элементов:', error);
     }
   }
 
-  // Обновление порядка элементов на сервере
   async updateOrder(order: number[]) {
     try {
       this.order = order;
       await API.post('/order', { order });
     } catch (error) {
-      console.error("Ошибка при обновлении порядка элементов:", error);
+      console.error('Ошибка при обновлении порядка элементов:', error);
     }
   }
 
-  // Установка нового поискового запроса
   setSearch(search: string) {
     this.search = search;
-    this.offset = 0; // Сбрасываем offset, если меняем запрос поиска
-    this.fetchItems(true); // Загружаем элементы с новым поисковым запросом
+    this.offset = 0;
+    this.fetchItems(true);
   }
 
-  // Добавление элемента в список выбранных
   selectItem(id: number) {
     if (!this.selected.includes(id)) {
       this.selected.push(id);
-      this.updateSelection(this.selected); // Обновляем выбор на сервере
+      this.updateSelection(this.selected);
     }
   }
 
-  // Удаление элемента из списка выбранных
   deselectItem(id: number) {
-    this.selected = this.selected.filter(item => item !== id);
-    this.updateSelection(this.selected); // Обновляем выбор на сервере
+    this.selected = this.selected.filter((item) => item !== id);
+    this.updateSelection(this.selected);
   }
 
   setOrder(newOrder: number[]) {

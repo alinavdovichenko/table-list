@@ -12,7 +12,16 @@ let state = {
   order: [],
 };
 
-const items = Array.from({ length: 1_000_000 }, (_, i) => i + 1);
+function generateShuffledItems(size) {
+    const array = Array.from({ length: size }, (_, i) => i + 1);
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+  }
+  
+  const items = generateShuffledItems(1_000_000);
 
 app.get('/items', (req, res) => {
   const { offset = 0, limit = 20, search = '' } = req.query;
