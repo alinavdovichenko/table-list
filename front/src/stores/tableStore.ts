@@ -5,6 +5,8 @@ interface ItemResponse {
   items: number[];
   total: number;
   selected: number[];
+  order: number[];
+  search: string;
 }
 
 class TableStore {
@@ -24,40 +26,52 @@ class TableStore {
   async fetchItems(reset = false) {
     if (this.isLoading) return;
     if (!reset && this.items.length >= this.total) return;
-
+  
     this.isLoading = true;
     const currentOffset = reset ? 0 : this.offset;
-
+  
     try {
       const res = await API.get<ItemResponse>('/items', {
         params: {
           offset: currentOffset,
           limit: this.limit,
-          search: this.search,
         },
       });
-
+  
       runInAction(() => {
-        const newItems = res.data.items.filter(id => !this.items.includes(id));
-
-        this.items = reset ? newItems : [...this.items, ...newItems];
+        if (reset) {
+          this.items = res.data.items;
+        } else {
+          const newItems = res.data.items.filter(id => !this.items.includes(id));
+          this.items = [...this.items, ...newItems];
+        }
+  
         this.total = res.data.total;
         this.selected = res.data.selected;
+        this.order = res.data.order;
+        this.search = res.data.search; // ← вот тут
         this.offset = currentOffset + this.limit;
       });
     } catch (error) {
-      console.error('Ошибка при загрузке данных:', error);
+      console.error('Ошибка при загрузке:', error);
     } finally {
       runInAction(() => {
         this.isLoading = false;
       });
     }
   }
+  
 
-  setSearch(search: string) {
+  async setSearch(search: string) {
     this.search = search;
     this.offset = 0;
-    this.fetchItems(true);
+  
+    try {
+      await API.post('/search', { search });
+      this.fetchItems(true);
+    } catch (error) {
+      console.error('Ошибка при установке поиска:', error);
+    }
   }
 
   selectItem(id: number) {
@@ -91,6 +105,18 @@ class TableStore {
 
   setOrder(newOrder: number[]) {
     this.updateOrder(newOrder);
+  }
+
+  async resetOrder() {
+    try {
+      this.order = [];
+      await API.post('/order', { order: [] });
+      this.offset = 0;
+      this.items = [];
+      await this.fetchItems(true);
+    } catch (error) {
+      console.error('Ошибка при сбросе порядка:', error);
+    }
   }
 }
 

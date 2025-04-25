@@ -10,6 +10,7 @@ app.use(express.json());
 let state = {
   selected: [],
   order: [],
+  search: ''
 };
 
 function generateShuffledItems(size) {
@@ -24,7 +25,8 @@ function generateShuffledItems(size) {
   const items = generateShuffledItems(1_000_000);
 
 app.get('/items', (req, res) => {
-  const { offset = 0, limit = 20, search = '' } = req.query;
+  const { offset = 0, limit = 20 } = req.query;
+  const search = state.search;
 
   let filtered = items;
   if (search) {
@@ -41,8 +43,14 @@ app.get('/items', (req, res) => {
     items: paged,
     total: filtered.length,
     selected: state.selected,
-    order: state.order
+    order: state.order,
+    search: state.search
   });
+});
+
+app.post('/search', (req, res) => {
+  state.search = req.body.search || '';
+  res.sendStatus(200);
 });
 
 app.post('/select', (req, res) => {

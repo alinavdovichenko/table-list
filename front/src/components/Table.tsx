@@ -49,6 +49,9 @@ export const Table: React.FC = observer(() => {
         <button onClick={handleSearch} className="search-button">
           Поиск
         </button>
+        <button onClick={() => store.resetOrder()} className="search-button search-button--reset">
+          Сбросить
+        </button>
       </div>
 
       <div className="list-container">
