@@ -18,6 +18,7 @@ class TableStore {
   order: number[] = [];
   search = '';
   isLoading = false;
+  dragOverId: number | null = null;
 
   constructor() {
     makeAutoObservable(this);
@@ -49,7 +50,7 @@ class TableStore {
         this.total = res.data.total;
         this.selected = res.data.selected;
         this.order = res.data.order;
-        this.search = res.data.search; // ← вот тут
+        this.search = res.data.search;
         this.offset = currentOffset + this.limit;
       });
     } catch (error) {
@@ -110,7 +111,11 @@ class TableStore {
   async resetOrder() {
     try {
       this.order = [];
-      await API.post('/order', { order: [] });
+      await Promise.all([
+        API.post('/order', { order: [] }),
+        API.post('/search', { search: '' }),
+        API.post('/select', { selected: [] })
+      ]);
       this.offset = 0;
       this.items = [];
       await this.fetchItems(true);
@@ -118,6 +123,25 @@ class TableStore {
       console.error('Ошибка при сбросе порядка:', error);
     }
   }
+
+  moveItem(fromId: number, toId: number) {
+    const fromIndex = this.items.indexOf(fromId);
+    const toIndex = this.items.indexOf(toId);
+  
+    if (fromIndex === -1 || toIndex === -1) return;
+  
+    const updated = [...this.items];
+    const [moved] = updated.splice(fromIndex, 1);
+    updated.splice(toIndex, 0, moved);
+  
+    this.items = updated;
+    this.updateOrder(updated); // сохраняем порядок на сервер
+  }
+
+  setDragOver(id: number | null) {
+  this.dragOverId = id;
+}
+  
 }
 
 const store = new TableStore();

@@ -39,37 +39,7 @@ h1 {
   padding: 10px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.06);
   border: 1px solid #e4e4e4;
-}
-
-.item-row {
-  display: flex;
-  align-items: center;
-  justify-content: start;
-  gap: 12px;
-  padding: 10px 16px;
-  margin-bottom: 8px;
-  background: $item-bg;
-  border-radius: $border-radius;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
-  cursor: grab;
-  transition: background 0.2s ease, transform 0.2s ease;
-
-  &:hover {
-    background: $item-hover;
-  }
-
-  &.selected {
-    background: $item-selected;
-  }
-
-  .checkbox {
-    transform: scale(1.2);
-  }
-
-  .item-id {
-    font-weight: 500;
-    font-size: 16px;
-  }
+  cursor: move;
 }
 
 .loader {

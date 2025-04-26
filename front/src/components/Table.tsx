@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import store from '../stores/tableStore';
 import { observer } from 'mobx-react-lite';
 import { ItemRow } from './ItemRow';
+import { LoaderSentinel } from './LoaderSentinel';
 
 export const Table: React.FC = observer(() => {
   const sentinelRef = useRef<HTMLDivElement | null>(null);
@@ -32,6 +33,11 @@ export const Table: React.FC = observer(() => {
     store.setOrder(store.items);
   };
 
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault(); // обязательно, чтобы drop работал
+    e.dataTransfer.dropEffect = 'move'; // визуальный эффект при наведении
+  };
+
   return (
     <div className="table-wrapper">
       <h1>Table List</h1>
@@ -54,13 +60,13 @@ export const Table: React.FC = observer(() => {
         </button>
       </div>
 
-      <div className="list-container">
+      <div className="list-container" onDragOver={handleDragOver}>
         {store.items.map((id) => (
           <ItemRow key={id} id={id} />
         ))}
-        {store.isLoading && <div className="loader" />}
-        <div ref={sentinelRef} style={{ height: '1px' }} />
       </div>
+
+      <LoaderSentinel sentinelRef={sentinelRef} isLoading={store.isLoading} />
     </div>
   );
 });

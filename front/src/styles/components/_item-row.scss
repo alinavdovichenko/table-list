@@ -1,14 +1,21 @@
 .item-row {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 10px;
     border-bottom: 1px solid #ddd;
-    cursor: pointer;
-    transition: background-color 0.3s;
+    cursor: move;
+    gap: 12px;
+    margin-bottom: 8px;
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
+    transition: background-color 0.2s ease, outline 0.2s ease, background 0.2s ease, transform 0.2s ease;
   
     .checkbox {
       margin-right: 10px;
+      transform: scale(1.2);
+      cursor: pointer;
     }
   
     .item-id {
@@ -24,5 +31,15 @@
       background-color: #d3f9d8; /* светлый зеленый для выбранных элементов */
       border-left: 5px solid #4caf50; /* зеленая полоска слева */
     }
+
+    &.dragging {
+      opacity: 0.6;
+    }
   }
+  .item-row.drag-over {
+    background-color: #e3f2fd; /* нежно-голубой */
+    outline: 2px dashed #90caf9;
+  }
+
+  
   
