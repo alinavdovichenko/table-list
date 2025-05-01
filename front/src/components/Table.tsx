@@ -34,8 +34,8 @@ export const Table: React.FC = observer(() => {
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault(); // обязательно, чтобы drop работал
-    e.dataTransfer.dropEffect = 'move'; // визуальный эффект при наведении
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
   };
 
   return (

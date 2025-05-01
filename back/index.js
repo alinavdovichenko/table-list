@@ -13,16 +13,11 @@ let state = {
   search: ''
 };
 
-function generateShuffledItems(size) {
-    const array = Array.from({ length: size }, (_, i) => i + 1);
-    for (let i = array.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [array[i], array[j]] = [array[j], array[i]];
-    }
-    return array;
-  }
-  
-  const items = generateShuffledItems(1_000_000);
+function generateItems(size) {
+  return Array.from({ length: size }, (_, i) => i + 1);
+}
+
+const items = generateItems(1_000_000);
 
 app.get('/items', (req, res) => {
   const { offset = 0, limit = 20 } = req.query;
