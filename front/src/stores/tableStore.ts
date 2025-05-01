@@ -64,12 +64,10 @@ class TableStore {
   
 
   async setSearch(search: string) {
-    this.search = search;
     this.offset = 0;
-  
     try {
       await API.post('/search', { search });
-      this.fetchItems(true);
+      await this.fetchItems(true);
     } catch (error) {
       console.error('Ошибка при установке поиска:', error);
     }
@@ -95,7 +93,7 @@ class TableStore {
     }
   }
 
-  async updateOrder(order: number[]) {
+  async setOrder(order: number[]) {
     try {
       this.order = order;
       await API.post('/order', { order });
@@ -104,13 +102,8 @@ class TableStore {
     }
   }
 
-  setOrder(newOrder: number[]) {
-    this.updateOrder(newOrder);
-  }
-
-  async resetOrder() {
+  async resetAll() {
     try {
-      this.order = [];
       await Promise.all([
         API.post('/order', { order: [] }),
         API.post('/search', { search: '' }),
@@ -120,7 +113,7 @@ class TableStore {
       this.items = [];
       await this.fetchItems(true);
     } catch (error) {
-      console.error('Ошибка при сбросе порядка:', error);
+      console.error('Ошибка при сбросе:', error);
     }
   }
 
@@ -135,7 +128,7 @@ class TableStore {
     updated.splice(toIndex, 0, moved);
   
     this.items = updated;
-    this.updateOrder(updated); // сохраняем порядок на сервер
+    this.setOrder(updated); // сохраняем порядок на сервер
   }
 
   setDragOver(id: number | null) {

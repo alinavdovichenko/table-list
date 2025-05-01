@@ -22,16 +22,22 @@ const items = generateItems(1_000_000);
 app.get('/items', (req, res) => {
   const { offset = 0, limit = 20 } = req.query;
   const search = state.search;
-
   let filtered = items;
+
   if (search) {
     filtered = filtered.filter(i => i.toString().includes(search));
   }
 
-  const ordered =
-  state.order.length && filtered.some(i => state.order.includes(i))
-    ? state.order.filter(i => filtered.includes(i))
-    : filtered;
+  let ordered;
+  if (state.order.length) {
+    const orderedSet = new Set(state.order);
+    const inOrder = state.order.filter(id => filtered.includes(id));
+    const notInOrder = filtered.filter(id => !orderedSet.has(id));
+    ordered = [...inOrder, ...notInOrder];
+  } else {
+    ordered = filtered;
+  }
+
   const paged = ordered.slice(Number(offset), Number(offset) + Number(limit));
 
   res.json({
@@ -42,6 +48,7 @@ app.get('/items', (req, res) => {
     search: state.search
   });
 });
+
 
 app.post('/search', (req, res) => {
   state.search = req.body.search || '';

@@ -30,7 +30,7 @@ export const ItemRow: React.FC<ItemRowProps> = observer(({ id }) => {
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault(); // нужно, чтобы drop сработал
+    e.preventDefault();
     store.setDragOver(id);
   };
 

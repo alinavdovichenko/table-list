@@ -30,7 +30,11 @@ export const Table: React.FC = observer(() => {
 
   const handleSearch = () => {
     store.setSearch(searchValue.trim());
-    store.setOrder(store.items);
+  };
+
+  const handleResetAll = () => {
+    store.resetAll();
+    setSearchValue('');
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
@@ -47,7 +51,13 @@ export const Table: React.FC = observer(() => {
           className="search"
           placeholder="Поиск..."
           value={searchValue}
-          onChange={(e) => setSearchValue(e.target.value)}
+          onChange={(e) => {
+            const value = e.target.value;
+            setSearchValue(value);
+            if (value.trim() === '') {
+              store.setSearch('');
+            }
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Enter') handleSearch();
           }}
@@ -55,7 +65,7 @@ export const Table: React.FC = observer(() => {
         <button onClick={handleSearch} className="search-button">
           Поиск
         </button>
-        <button onClick={() => store.resetOrder()} className="search-button search-button--reset">
+        <button onClick={handleResetAll} className="search-button search-button--reset">
           Сбросить
         </button>
       </div>
