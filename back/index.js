@@ -9,12 +9,12 @@ app.use(express.json());
 
 let state = {
   selected: [],
-  order: [],
+  order: [], // [{ index, id }]
   search: ''
 };
 
 function generateItems(size) {
-  return Array.from({ length: size }, (_, i) => i + 1);
+  return Array.from({ length: size }, (_, i) => ({ index: i, id: i }));
 }
 
 const items = generateItems(1_000_000);
@@ -22,18 +22,19 @@ const items = generateItems(1_000_000);
 app.get('/items', (req, res) => {
   const { offset = 0, limit = 20 } = req.query;
   const search = state.search;
-  let filtered = items;
 
+  let filtered = items;
   if (search) {
-    filtered = filtered.filter(i => i.toString().includes(search));
+    filtered = filtered.filter(({ id }) => id.toString().includes(search));
   }
 
   let ordered;
   if (state.order.length) {
-    const orderedSet = new Set(state.order);
-    const inOrder = state.order.filter(id => filtered.includes(id));
-    const notInOrder = filtered.filter(id => !orderedSet.has(id));
-    ordered = [...inOrder, ...notInOrder];
+    const orderMap = new Map(state.order.map(entry => [entry.index, entry.id]));
+    ordered = filtered.map(({ index, id }) => ({
+      index,
+      id: orderMap.has(index) ? orderMap.get(index) : id
+    }));
   } else {
     ordered = filtered;
   }
@@ -44,11 +45,9 @@ app.get('/items', (req, res) => {
     items: paged,
     total: filtered.length,
     selected: state.selected,
-    order: state.order,
     search: state.search
   });
 });
-
 
 app.post('/search', (req, res) => {
   state.search = req.body.search || '';
@@ -61,7 +60,10 @@ app.post('/select', (req, res) => {
 });
 
 app.post('/order', (req, res) => {
-  state.order = req.body.order || [];
+  const newOrder = req.body.order;
+  if (Array.isArray(newOrder)) {
+    state.order = newOrder;
+  }
   res.sendStatus(200);
 });
 

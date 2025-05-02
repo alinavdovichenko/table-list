@@ -47,7 +47,7 @@ export const ItemRow: React.FC<ItemRowProps> = observer(({ id }) => {
   };
 
   return (
-    <div className={`item-row ${isSelected ? 'selected' : ''} ${dragging ? 'dragging' : ''}`} 
+    <div className={`item-row ${isSelected ? 'selected' : ''} ${dragging ? 'dragging' : ''} ${store.dragOverId === id ? 'drag-over' : ''}`} 
          draggable="true"
          onDragStart={handleDragStart}
          onDragEnd={handleDragEnd}

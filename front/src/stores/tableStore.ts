@@ -62,7 +62,6 @@ class TableStore {
     }
   }
   
-
   async setSearch(search: string) {
     this.offset = 0;
     try {
@@ -132,9 +131,8 @@ class TableStore {
   }
 
   setDragOver(id: number | null) {
-  this.dragOverId = id;
-}
-  
+    this.dragOverId = id;
+  } 
 }
 
 const store = new TableStore();

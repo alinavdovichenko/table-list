@@ -71,6 +71,9 @@ export const Table: React.FC = observer(() => {
       </div>
 
       <div className="list-container" onDragOver={handleDragOver}>
+        {store.items.length 
+          ? <div className="table-title">{store.items.length} результатов</div> 
+          : <div className="table-title">нет результатов</div>}
         {store.items.map((id) => (
           <ItemRow key={id} id={id} />
         ))}
