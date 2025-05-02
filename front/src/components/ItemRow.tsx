@@ -7,7 +7,7 @@ interface ItemRowProps {
   index: number;
 }
 
-export const ItemRow: React.FC<ItemRowProps> = observer(({ id, index }) => {
+export const ItemRow: React.FC<ItemRowProps> = observer(({ id }) => {
   const isSelected = store.selected.includes(id);
   const [dragging, setDragging] = useState(false);
   const isDragOver = store.dragOverId === id && store.draggingItemId !== id;
@@ -82,7 +82,6 @@ export const ItemRow: React.FC<ItemRowProps> = observer(({ id, index }) => {
         </div>
       )}
 
-      <span className="item-index">{index}</span>
       <input
         type="checkbox"
         checked={isSelected}

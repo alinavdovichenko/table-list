@@ -55,7 +55,7 @@ export const Table: React.FC = observer(() => {
 
   return (
     <div className="table-wrapper">
-      <h1>Список элементов</h1>
+      <h1>Table List</h1>
 
       <div className="table-controls">
         <input
@@ -70,15 +70,20 @@ export const Table: React.FC = observer(() => {
         <button onClick={handleSearch} className="search-button">
           Поиск
         </button>
-        <button onClick={handleResetAll} className="search-button reset-button">
+        <button onClick={handleResetAll} className="search-button search-button--reset">
           Сбросить
         </button>
       </div>
 
       <div className="list-container" onDragOver={handleDragOver}>
-        <div className="table-title">
-          {store.items.length ? `${store.total} результатов` : 'Нет результатов'}
-        </div>
+      <div className="table-title">
+        {store.isLoading && store.items.length === 0
+          ? 'Данные загружаются...'
+          : store.items.length
+          ? `${store.total} результатов`
+          : 'Нет результатов'}
+      </div>
+
 
         {store.items.map(({ index, id }) => (
           <ItemRow key={id} index={index} id={id} />
