@@ -39,11 +39,32 @@
     &.dragging {
       opacity: 0.6;
     }
+
+    &.drag-over-before {
+      border-top: 2px dashed #007acc;
+    }
+    
+    &.drag-over-after {
+      border-bottom: 2px dashed #007acc;
+    }
     
     &.drag-over {
       background-color: #e3f2fd; /* нежно-голубой */
       outline: 2px dashed #90caf9;
     }
+  }
+
+  .drop-indicator {
+    position: absolute;
+    left: 10px;
+    top: -1.5em;
+    font-size: 0.8em;
+    color: #007acc;
+  }
+  
+  .drop-indicator.drop-after {
+    top: unset;
+    bottom: -1.5em;
   }
 
   

@@ -22,6 +22,8 @@ class TableStore {
   search = '';
   isLoading = false;
   dragOverId: number | null = null;
+  dropPosition: 'before' | 'after' | null = null;
+  draggingItemId: number | null = null;
 
   constructor() {
     makeAutoObservable(this);
@@ -114,24 +116,32 @@ class TableStore {
     }
   }
 
-  moveItemByIndex(fromIndex: number, toIndex: number) {
-    const fromItem = this.items.find(i => i.index === fromIndex);
-    const toItem = this.items.find(i => i.index === toIndex);
-    if (!fromItem || !toItem) return;
-
-    const updated = [...this.items];
-    const fromIdx = updated.findIndex(i => i.index === fromIndex);
-    const [moved] = updated.splice(fromIdx, 1);
-    const insertIdx = updated.findIndex(i => i.index === toIndex);
-    updated.splice(insertIdx, 0, moved);
-
-    this.items = updated;
-    this.setOrder(this.items);
-  }
-
-  setDragOver(id: number | null) {
+  setDragOver(id: number | null, position: 'before' | 'after' | null = null) {
+    if (this.dragOverId === id && this.dropPosition === position) return;
     this.dragOverId = id;
+    this.dropPosition = position;
   }
+  
+  setDraggingItem(id: number) {
+    this.draggingItemId = id;
+  }
+  
+  clearDragState() {
+    this.dragOverId = null;
+    this.dropPosition = null;
+    this.draggingItemId = null;
+  }
+  
+  async moveItemById(fromId: number, toId: number, position: 'before' | 'after' = 'before') {
+    try {
+      await API.post('/move', { fromId, toId, position });
+      this.offset = 0;
+      await this.fetchItems(true); 
+    } catch (error) {
+      console.error('Ошибка при перемещении:', error);
+    }
+  }
+  
 }
 
 const store = new TableStore();

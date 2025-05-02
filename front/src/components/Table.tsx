@@ -62,12 +62,8 @@ export const Table: React.FC = observer(() => {
             if (e.key === 'Enter') handleSearch();
           }}
         />
-        <button onClick={handleSearch} className="search-button">
-          Поиск
-        </button>
-        <button onClick={handleResetAll} className="search-button search-button--reset">
-          Сбросить
-        </button>
+        <button onClick={handleSearch} className="search-button">Поиск</button>
+        <button onClick={handleResetAll} className="search-button search-button--reset">Сбросить</button>
       </div>
 
       <div className="list-container" onDragOver={handleDragOver}>
@@ -76,7 +72,7 @@ export const Table: React.FC = observer(() => {
           : <div className="table-title">нет результатов</div>}
 
         {store.items.map(({ index, id }) => (
-          <ItemRow key={index} index={index} id={id} />
+          <ItemRow key={id} index={index} id={id} />
         ))}
       </div>
 
