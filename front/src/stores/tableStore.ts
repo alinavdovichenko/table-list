@@ -33,26 +33,29 @@ class TableStore {
     if (this.isLoading) return;
     if (!reset && this.items.length >= this.total) return;
 
+    if (reset) {
+      runInAction(() => {
+        this.offset = 0;
+        this.items = [];
+      });
+    }
+
     this.isLoading = true;
-    const currentOffset = reset ? 0 : this.offset;
 
     try {
       const res = await API.get<ItemResponse>('/items', {
-        params: { offset: currentOffset, limit: this.limit },
+        params: { offset: this.offset, limit: this.limit },
       });
 
       runInAction(() => {
-        if (reset) {
-          this.items = res.data.items;
-        } else {
-          const newItems = res.data.items.filter(i => !this.items.find(existing => existing.id === i.id));
-          this.items = [...this.items, ...newItems];
-        }
+        const fetched = res.data.items;
+        const newItems = fetched.filter(i => !this.items.find(existing => existing.id === i.id));
+        this.items = reset ? fetched : [...this.items, ...newItems];
 
         this.total = res.data.total;
         this.selected = res.data.selected;
         this.search = res.data.search;
-        this.offset = currentOffset + this.limit;
+        this.offset += this.limit;
       });
     } catch (error) {
       console.error('Ошибка при загрузке:', error);
@@ -64,7 +67,6 @@ class TableStore {
   }
 
   async setSearch(search: string) {
-    this.offset = 0;
     try {
       await API.post('/search', { search });
       await this.fetchItems(true);
@@ -108,8 +110,10 @@ class TableStore {
         API.post('/search', { search: '' }),
         API.post('/select', { selected: [] }),
       ]);
-      this.offset = 0;
-      this.items = [];
+      runInAction(() => {
+        this.offset = 0;
+        this.items = [];
+      });
       await this.fetchItems(true);
     } catch (error) {
       console.error('Ошибка при сбросе:', error);
@@ -121,27 +125,29 @@ class TableStore {
     this.dragOverId = id;
     this.dropPosition = position;
   }
-  
+
   setDraggingItem(id: number) {
     this.draggingItemId = id;
   }
-  
+
   clearDragState() {
     this.dragOverId = null;
     this.dropPosition = null;
     this.draggingItemId = null;
   }
-  
+
   async moveItemById(fromId: number, toId: number, position: 'before' | 'after' = 'before') {
     try {
       await API.post('/move', { fromId, toId, position });
-      this.offset = 0;
-      await this.fetchItems(true); 
+      runInAction(() => {
+        this.offset = 0;
+        this.items = [];
+      });
+      await this.fetchItems(true);
     } catch (error) {
       console.error('Ошибка при перемещении:', error);
     }
   }
-  
 }
 
 const store = new TableStore();

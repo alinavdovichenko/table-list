@@ -11,7 +11,7 @@ export const ItemRow: React.FC<ItemRowProps> = observer(({ id, index }) => {
   const isSelected = store.selected.includes(id);
   const [dragging, setDragging] = useState(false);
   const isDragOver = store.dragOverId === id && store.draggingItemId !== id;
-  const dropPosition = store.dropPosition; // 'before' | 'after' | null
+  const dropPosition = isDragOver ? store.dropPosition : null;
 
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
     setDragging(true);
@@ -28,9 +28,11 @@ export const ItemRow: React.FC<ItemRowProps> = observer(({ id, index }) => {
     e.preventDefault();
     const fromId = parseInt(e.dataTransfer.getData('text/plain'), 10);
     const toId = id;
+
     if (fromId !== toId && dropPosition) {
       store.moveItemById(fromId, toId, dropPosition);
     }
+
     store.clearDragState();
   };
 
@@ -45,6 +47,7 @@ export const ItemRow: React.FC<ItemRowProps> = observer(({ id, index }) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const midpoint = rect.top + rect.height / 2;
     const position = e.clientY < midpoint ? 'before' : 'after';
+
     store.setDragOver(id, position);
   };
 
@@ -62,8 +65,11 @@ export const ItemRow: React.FC<ItemRowProps> = observer(({ id, index }) => {
 
   return (
     <div
-      className={`item-row ${isSelected ? 'selected' : ''} ${dragging ? 'dragging' : ''} ${isDragOver ? `drag-over-${dropPosition}` : ''}`}
-      draggable="true"
+      className={`item-row 
+        ${isSelected ? 'selected' : ''} 
+        ${dragging ? 'dragging' : ''} 
+        ${isDragOver && dropPosition ? `drag-over-${dropPosition}` : ''}`}
+      draggable
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onDragOver={handleDragOver}
@@ -76,7 +82,7 @@ export const ItemRow: React.FC<ItemRowProps> = observer(({ id, index }) => {
         </div>
       )}
 
-      <span className="item-id">{index}</span>
+      <span className="item-index">{index}</span>
       <input
         type="checkbox"
         checked={isSelected}

@@ -19,31 +19,34 @@ function generateItems(size) {
 
 const items = generateItems(1_000_000);
 
+// Инициализация порядка при запуске
+if (state.order.length === 0) {
+  state.order = items.map(({ id }) => ({ id }));
+}
+
 app.get('/items', (req, res) => {
   const offset = parseInt(req.query.offset || '0', 10);
   const limit = parseInt(req.query.limit || '20', 10);
   const search = state.search;
 
+  // 1. Фильтрация
   let filtered = items;
   if (search) {
     filtered = filtered.filter(({ id }) => id.toString().includes(search));
   }
 
-  let ordered = filtered;
+  // 2. Глобальная сортировка
   if (state.order.length) {
-    const orderSet = new Set(state.order.map(o => o.id));
-    const idToItem = new Map(filtered.map(i => [i.id, i]));
-
-    const orderedPart = state.order
-      .filter(({ id }) => idToItem.has(id))
-      .map(({ id }) => idToItem.get(id))
-      .filter(Boolean);
-
-    const remainingPart = filtered.filter(({ id }) => !orderSet.has(id));
-    ordered = [...orderedPart, ...remainingPart];
+    const orderMap = new Map(state.order.map(({ id }, index) => [id, index]));
+    filtered = filtered.slice().sort((a, b) => {
+      const indexA = orderMap.has(a.id) ? orderMap.get(a.id) : Infinity;
+      const indexB = orderMap.has(b.id) ? orderMap.get(b.id) : Infinity;
+      return indexA - indexB;
+    });
   }
 
-  const paged = ordered.slice(offset, offset + limit);
+  // 3. Пагинация
+  const paged = filtered.slice(offset, offset + limit);
 
   res.json({
     items: paged,
@@ -77,29 +80,35 @@ app.post('/order', (req, res) => {
 
 app.post('/move', (req, res) => {
   const { fromId, toId, position } = req.body;
-  if (typeof fromId !== 'number' || typeof toId !== 'number' || !['before', 'after'].includes(position)) {
+
+  if (
+    typeof fromId !== 'number' ||
+    typeof toId !== 'number' ||
+    !['before', 'after'].includes(position)
+  ) {
+    console.warn('Invalid move payload:', req.body);
     return res.status(400).send('Invalid move payload');
   }
 
-  const currentOrder = state.order.length ? [...state.order] : items.map(({ id }) => ({ id }));
-
+  const currentOrder = [...state.order];
   const fromIndex = currentOrder.findIndex(i => i.id === fromId);
   const toIndex = currentOrder.findIndex(i => i.id === toId);
   if (fromIndex === -1 || toIndex === -1) return res.sendStatus(400);
 
   const [moved] = currentOrder.splice(fromIndex, 1);
-  let insertIndex = toIndex;
 
-  if (position === 'after' && fromIndex < toIndex) insertIndex = toIndex;
-  else if (position === 'after') insertIndex = toIndex + 1;
-  else if (position === 'before' && fromIndex < toIndex) insertIndex = toIndex - 1;
+  let insertIndex;
+  if (position === 'after') {
+    insertIndex = toIndex + (fromIndex < toIndex ? 0 : 1);
+  } else {
+    insertIndex = toIndex - (fromIndex < toIndex ? 1 : 0);
+  }
 
   currentOrder.splice(insertIndex, 0, moved);
-
   state.order = currentOrder;
+
   res.sendStatus(200);
 });
-
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

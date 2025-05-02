@@ -14,7 +14,7 @@ export const Table: React.FC = observer(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         const first = entries[0];
-        if (first.isIntersecting && !store.isLoading) {
+        if (first.isIntersecting && !store.isLoading && store.items.length < store.total) {
           store.fetchItems();
         }
       },
@@ -29,7 +29,10 @@ export const Table: React.FC = observer(() => {
   }, []);
 
   const handleSearch = () => {
-    store.setSearch(searchValue.trim());
+    const trimmed = searchValue.trim();
+    if (trimmed !== store.search) {
+      store.setSearch(trimmed);
+    }
   };
 
   const handleResetAll = () => {
@@ -42,34 +45,40 @@ export const Table: React.FC = observer(() => {
     e.dataTransfer.dropEffect = 'move';
   };
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchValue(value);
+    if (value.trim() === '' && store.search !== '') {
+      store.setSearch('');
+    }
+  };
+
   return (
     <div className="table-wrapper">
-      <h1>Table List</h1>
+      <h1>Список элементов</h1>
 
-      <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginBottom: '20px' }}>
+      <div className="table-controls">
         <input
-          className="search"
+          className="search-input"
           placeholder="Поиск..."
           value={searchValue}
-          onChange={(e) => {
-            const value = e.target.value;
-            setSearchValue(value);
-            if (value.trim() === '') {
-              store.setSearch('');
-            }
-          }}
+          onChange={handleInputChange}
           onKeyDown={(e) => {
             if (e.key === 'Enter') handleSearch();
           }}
         />
-        <button onClick={handleSearch} className="search-button">Поиск</button>
-        <button onClick={handleResetAll} className="search-button search-button--reset">Сбросить</button>
+        <button onClick={handleSearch} className="search-button">
+          Поиск
+        </button>
+        <button onClick={handleResetAll} className="search-button reset-button">
+          Сбросить
+        </button>
       </div>
 
       <div className="list-container" onDragOver={handleDragOver}>
-        {store.items.length
-          ? <div className="table-title">{store.items.length} результатов</div>
-          : <div className="table-title">нет результатов</div>}
+        <div className="table-title">
+          {store.items.length ? `${store.total} результатов` : 'Нет результатов'}
+        </div>
 
         {store.items.map(({ index, id }) => (
           <ItemRow key={id} index={index} id={id} />
