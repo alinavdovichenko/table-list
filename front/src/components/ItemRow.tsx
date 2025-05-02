@@ -57,6 +57,7 @@ export const ItemRow: React.FC<ItemRowProps> = observer(({ id, index }) => {
       onDrop={handleDrop}
       onDragLeave={handleDragLeave}
     >
+      <span className="item-id">{index}</span>
       <input
         type="checkbox"
         checked={isSelected}

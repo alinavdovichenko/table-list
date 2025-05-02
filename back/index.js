@@ -43,9 +43,7 @@ app.get('/items', (req, res) => {
     ordered = [...orderedPart, ...remainingPart];
   }
 
-  // Переиндексация
-  const reindexed = ordered.map((item, i) => ({ index: i, id: item.id }));
-  const paged = reindexed.slice(offset, offset + limit);
+  const paged = ordered.slice(offset, offset + limit);
 
   res.json({
     items: paged,
