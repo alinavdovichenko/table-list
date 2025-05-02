@@ -4,15 +4,16 @@ import { observer } from 'mobx-react-lite';
 
 interface ItemRowProps {
   id: number;
+  index: number;
 }
 
-export const ItemRow: React.FC<ItemRowProps> = observer(({ id }) => {
+export const ItemRow: React.FC<ItemRowProps> = observer(({ id, index }) => {
   const isSelected = store.selected.includes(id);
   const [dragging, setDragging] = useState(false);
 
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
     setDragging(true);
-    e.dataTransfer.setData('text/plain', id.toString());
+    e.dataTransfer.setData('text/plain', index.toString());
   };
 
   const handleDragEnd = () => {
@@ -21,11 +22,11 @@ export const ItemRow: React.FC<ItemRowProps> = observer(({ id }) => {
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    const fromId = parseInt(e.dataTransfer.getData('text/plain'), 10);
-    const toId = id;
+    const fromIndex = parseInt(e.dataTransfer.getData('text/plain'), 10);
+    const toIndex = index;
 
-    if (fromId !== toId) {
-      store.moveItem(fromId, toId);
+    if (fromIndex !== toIndex) {
+      store.moveItemByIndex(fromIndex, toIndex);
     }
   };
 
@@ -47,13 +48,14 @@ export const ItemRow: React.FC<ItemRowProps> = observer(({ id }) => {
   };
 
   return (
-    <div className={`item-row ${isSelected ? 'selected' : ''} ${dragging ? 'dragging' : ''} ${store.dragOverId === id ? 'drag-over' : ''}`} 
-         draggable="true"
-         onDragStart={handleDragStart}
-         onDragEnd={handleDragEnd}
-         onDragOver={handleDragOver}
-         onDrop={handleDrop}
-         onDragLeave={handleDragLeave}
+    <div
+      className={`item-row ${isSelected ? 'selected' : ''} ${dragging ? 'dragging' : ''} ${store.dragOverId === id ? 'drag-over' : ''}`}
+      draggable="true"
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+      onDragLeave={handleDragLeave}
     >
       <input
         type="checkbox"

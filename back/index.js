@@ -9,7 +9,7 @@ app.use(express.json());
 
 let state = {
   selected: [],
-  order: [], // [{ index, id }]
+  order: [], // [{ id }]
   search: ''
 };
 
@@ -20,7 +20,8 @@ function generateItems(size) {
 const items = generateItems(1_000_000);
 
 app.get('/items', (req, res) => {
-  const { offset = 0, limit = 20 } = req.query;
+  const offset = parseInt(req.query.offset || '0', 10);
+  const limit = parseInt(req.query.limit || '20', 10);
   const search = state.search;
 
   let filtered = items;
@@ -28,18 +29,23 @@ app.get('/items', (req, res) => {
     filtered = filtered.filter(({ id }) => id.toString().includes(search));
   }
 
-  let ordered;
+  let ordered = filtered;
   if (state.order.length) {
-    const orderMap = new Map(state.order.map(entry => [entry.index, entry.id]));
-    ordered = filtered.map(({ index, id }) => ({
-      index,
-      id: orderMap.has(index) ? orderMap.get(index) : id
-    }));
-  } else {
-    ordered = filtered;
+    const orderSet = new Set(state.order.map(o => o.id));
+    const idToItem = new Map(filtered.map(i => [i.id, i]));
+
+    const orderedPart = state.order
+      .filter(({ id }) => idToItem.has(id))
+      .map(({ id }) => idToItem.get(id))
+      .filter(Boolean);
+
+    const remainingPart = filtered.filter(({ id }) => !orderSet.has(id));
+    ordered = [...orderedPart, ...remainingPart];
   }
 
-  const paged = ordered.slice(Number(offset), Number(offset) + Number(limit));
+  // Переиндексация
+  const reindexed = ordered.map((item, i) => ({ index: i, id: item.id }));
+  const paged = reindexed.slice(offset, offset + limit);
 
   res.json({
     items: paged,
@@ -62,7 +68,11 @@ app.post('/select', (req, res) => {
 app.post('/order', (req, res) => {
   const newOrder = req.body.order;
   if (Array.isArray(newOrder)) {
-    state.order = newOrder;
+    state.order = newOrder.filter(
+      (entry, i, arr) =>
+        entry && typeof entry.id === 'number' &&
+        arr.findIndex(e => e.id === entry.id) === i
+    );
   }
   res.sendStatus(200);
 });

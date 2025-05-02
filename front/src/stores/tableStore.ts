@@ -1,21 +1,24 @@
 import { makeAutoObservable, runInAction } from 'mobx';
 import API from '../api/api';
 
+interface Item {
+  index: number;
+  id: number;
+}
+
 interface ItemResponse {
-  items: number[];
+  items: Item[];
   total: number;
   selected: number[];
-  order: number[];
   search: string;
 }
 
 class TableStore {
-  items: number[] = [];
+  items: Item[] = [];
   total = 0;
   selected: number[] = [];
   offset = 0;
   limit = 20;
-  order: number[] = [];
   search = '';
   isLoading = false;
   dragOverId: number | null = null;
@@ -27,29 +30,25 @@ class TableStore {
   async fetchItems(reset = false) {
     if (this.isLoading) return;
     if (!reset && this.items.length >= this.total) return;
-  
+
     this.isLoading = true;
     const currentOffset = reset ? 0 : this.offset;
-  
+
     try {
       const res = await API.get<ItemResponse>('/items', {
-        params: {
-          offset: currentOffset,
-          limit: this.limit,
-        },
+        params: { offset: currentOffset, limit: this.limit },
       });
-  
+
       runInAction(() => {
         if (reset) {
           this.items = res.data.items;
         } else {
-          const newItems = res.data.items.filter(id => !this.items.includes(id));
+          const newItems = res.data.items.filter(i => !this.items.find(existing => existing.id === i.id));
           this.items = [...this.items, ...newItems];
         }
-  
+
         this.total = res.data.total;
         this.selected = res.data.selected;
-        this.order = res.data.order;
         this.search = res.data.search;
         this.offset = currentOffset + this.limit;
       });
@@ -61,7 +60,7 @@ class TableStore {
       });
     }
   }
-  
+
   async setSearch(search: string) {
     this.offset = 0;
     try {
@@ -92,12 +91,11 @@ class TableStore {
     }
   }
 
-  async setOrder(order: number[]) {
+  async setOrder(order: Item[]) {
     try {
-      this.order = order;
       await API.post('/order', { order });
     } catch (error) {
-      console.error('Ошибка при обновлении порядка элементов:', error);
+      console.error('Ошибка при обновлении порядка:', error);
     }
   }
 
@@ -106,7 +104,7 @@ class TableStore {
       await Promise.all([
         API.post('/order', { order: [] }),
         API.post('/search', { search: '' }),
-        API.post('/select', { selected: [] })
+        API.post('/select', { selected: [] }),
       ]);
       this.offset = 0;
       this.items = [];
@@ -116,23 +114,24 @@ class TableStore {
     }
   }
 
-  moveItem(fromId: number, toId: number) {
-    const fromIndex = this.items.indexOf(fromId);
-    const toIndex = this.items.indexOf(toId);
-  
-    if (fromIndex === -1 || toIndex === -1) return;
-  
+  moveItemByIndex(fromIndex: number, toIndex: number) {
+    const fromItem = this.items.find(i => i.index === fromIndex);
+    const toItem = this.items.find(i => i.index === toIndex);
+    if (!fromItem || !toItem) return;
+
     const updated = [...this.items];
-    const [moved] = updated.splice(fromIndex, 1);
-    updated.splice(toIndex, 0, moved);
-  
+    const fromIdx = updated.findIndex(i => i.index === fromIndex);
+    const [moved] = updated.splice(fromIdx, 1);
+    const insertIdx = updated.findIndex(i => i.index === toIndex);
+    updated.splice(insertIdx, 0, moved);
+
     this.items = updated;
-    this.setOrder(updated); // сохраняем порядок на сервер
+    this.setOrder(this.items);
   }
 
   setDragOver(id: number | null) {
     this.dragOverId = id;
-  } 
+  }
 }
 
 const store = new TableStore();
