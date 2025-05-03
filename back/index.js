@@ -14,12 +14,11 @@ let state = {
 };
 
 function generateItems(size) {
-  return Array.from({ length: size }, (_, i) => ({ index: i, id: i }));
+  return Array.from({ length: size }, (_, i) => ({ id: i }));
 }
 
 const items = generateItems(1_000_000);
 
-// Инициализация порядка при запуске
 if (state.order.length === 0) {
   state.order = items.map(({ id }) => ({ id }));
 }
@@ -29,13 +28,11 @@ app.get('/items', (req, res) => {
   const limit = parseInt(req.query.limit || '20', 10);
   const search = state.search;
 
-  // 1. Фильтрация
   let filtered = items;
   if (search) {
     filtered = filtered.filter(({ id }) => id.toString().includes(search));
   }
 
-  // 2. Глобальная сортировка
   if (state.order.length) {
     const orderMap = new Map(state.order.map(({ id }, index) => [id, index]));
     filtered = filtered.slice().sort((a, b) => {
@@ -45,7 +42,6 @@ app.get('/items', (req, res) => {
     });
   }
 
-  // 3. Пагинация
   const paged = filtered.slice(offset, offset + limit);
 
   res.json({

@@ -2,7 +2,6 @@ import { makeAutoObservable, runInAction } from 'mobx';
 import API from '../api/api';
 
 interface Item {
-  index: number;
   id: number;
 }
 

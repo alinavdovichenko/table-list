@@ -4,7 +4,6 @@ import { observer } from 'mobx-react-lite';
 
 interface ItemRowProps {
   id: number;
-  index: number;
 }
 
 export const ItemRow: React.FC<ItemRowProps> = observer(({ id }) => {
