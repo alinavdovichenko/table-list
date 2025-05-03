@@ -50,7 +50,7 @@ class TableStore {
         const existingIds = new Set(this.items.map(i => i.id));
         const newItems = fetched.filter(i => !existingIds.has(i.id));
 
-        this.items = reset ? fetched : [...this.items, ...newItems];
+        this.items = res.data.items;
         this.total = res.data.total;
         this.selected = res.data.selected;
         this.search = res.data.search;
