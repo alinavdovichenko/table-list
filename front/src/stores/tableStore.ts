@@ -16,6 +16,7 @@ class TableStore {
   items: Item[] = [];
   total = 0;
   selected: number[] = [];
+  fullOrder: number[] = [];
   offset = 0;
   limit = 20;
   search = '';
@@ -54,6 +55,9 @@ class TableStore {
         this.selected = res.data.selected;
         this.search = res.data.search;
         this.offset += this.limit;
+        if (reset && this.search === '') {
+          this.setFullOrder(this.items.map(item => item.id));
+        }
       });
     } catch (error) {
       console.error('Ошибка при загрузке:', error);
@@ -61,6 +65,17 @@ class TableStore {
       runInAction(() => {
         this.isLoading = false;
       });
+    }
+  }
+
+  async fetchFullOrder() {
+    try {
+      const res = await API.get<number[]>('/order'); // или другой эндпоинт, который возвращает порядок всех ID
+      runInAction(() => {
+        this.setFullOrder(res.data);
+      });
+    } catch (error) {
+      console.error('Ошибка при загрузке полного порядка:', error);
     }
   }
 
@@ -77,7 +92,6 @@ class TableStore {
     }
   }
   
-
   selectItem(id: number) {
     if (!this.selected.includes(id)) {
       this.selected.push(id);
@@ -116,6 +130,7 @@ class TableStore {
         this.dropPosition = null;
       });
 
+      await this.fetchFullOrder();
       await this.fetchItems(true);
     } catch (error) {
       console.error('Ошибка при сбросе:', error);
@@ -145,8 +160,8 @@ class TableStore {
       const toIndex = this.items.findIndex(i => i.id === toId);
       if (fromIndex === -1 || toIndex === -1) return;
   
-      const updated = [...this.items];
-      const [moved] = updated.splice(fromIndex, 1);
+      const visibleItems = [...this.items];
+      const [movedItem] = visibleItems.splice(fromIndex, 1);
   
       let insertAt;
       if (position === 'before') {
@@ -155,19 +170,28 @@ class TableStore {
         insertAt = fromIndex < toIndex ? toIndex : toIndex + 1;
       }
   
-      updated.splice(insertAt, 0, moved);
+      visibleItems.splice(insertAt, 0, movedItem);
+  
+      // Получаем ids всех отфильтрованных
+      const visibleIds = visibleItems.map(i => i.id);
+      // Получаем id'ы всех остальных (невидимых) в старом порядке
+      const invisible = this.fullOrder.filter(id => !visibleIds.includes(id));
+  
+      const fullOrder = [...visibleIds, ...invisible];
   
       runInAction(() => {
-        this.items = updated;
+        this.items = visibleItems;
       });
   
-      // 🧩 Добавляем отправку нового порядка
-      const orderIds = updated.map(i => i.id);
-      await this.setOrder(orderIds);
+      await this.setOrder(fullOrder);
   
     } catch (error) {
       console.error('Ошибка при перемещении:', error);
     }
+  }
+
+  setFullOrder(order: number[]) {
+    this.fullOrder = order;
   }
   
   async setOrder(order: number[]) {

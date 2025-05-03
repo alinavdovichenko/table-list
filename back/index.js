@@ -119,6 +119,9 @@ app.post('/order', (req, res) => {
   res.sendStatus(200);
 });
 
+app.get('/order', (req, res) => {
+  res.json(state.order.map(({ id }) => id));
+});
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

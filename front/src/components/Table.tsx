@@ -83,6 +83,13 @@ export const Table: React.FC = observer(() => {
             ? `${store.total} результатов`
             : 'Нет результатов'}
         </div>
+        <div className="table-title--selected">
+          {store.isLoading && store.selected.length === 0
+            ? ''
+            : store.selected.length
+            ? `Selected: ${store.selected}`
+            : 'Нет выделенных элементов'}
+        </div>
 
         {store.items.map(({ id }) => (
           <ItemRow key={id} id={id} />
