@@ -131,26 +131,34 @@ class TableStore {
 
   async moveItemById(fromId: number, toId: number, position: 'before' | 'after' = 'before') {
     try {
-      await API.post('/move', { fromId, toId, position });
-
-      // Локальная перестановка элементов (опционально)
-      const indexFrom = this.items.findIndex(i => i.id === fromId);
-      const indexTo = this.items.findIndex(i => i.id === toId);
-      if (indexFrom !== -1 && indexTo !== -1) {
-        const updated = [...this.items];
-        const [moved] = updated.splice(indexFrom, 1);
-        let insertAt = indexTo;
-        if (position === 'after') insertAt = indexTo + (indexFrom < indexTo ? 0 : 1);
-        else insertAt = indexTo - (indexFrom < indexTo ? 1 : 0);
-        updated.splice(insertAt, 0, moved);
-        runInAction(() => {
-          this.items = updated;
-        });
-      }
+      const fromIndex = this.items.findIndex(i => i.id === fromId);
+      const toIndex = this.items.findIndex(i => i.id === toId);
+      if (fromIndex === -1 || toIndex === -1) return;
+  
+      const updated = [...this.items];
+      const [moved] = updated.splice(fromIndex, 1);
+      const insertAt = position === 'before' ? toIndex : toIndex + 1;
+      updated.splice(insertAt, 0, moved);
+  
+      const newOrder = updated.map(i => i.id);
+      await API.post('/order', { order: newOrder });
+  
+      runInAction(() => {
+        this.items = updated;
+      });
     } catch (error) {
       console.error('Ошибка при перемещении:', error);
     }
   }
+  
+  async setOrder(order: number[]) {
+    try {
+      await API.post('/order', { order });
+    } catch (error) {
+      console.error('Ошибка при обновлении порядка:', error);
+    }
+  }
+  
 }
 
 const store = new TableStore();

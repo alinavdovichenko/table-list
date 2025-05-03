@@ -62,14 +62,26 @@ app.post('/select', (req, res) => {
 });
 
 app.post('/order', (req, res) => {
-  const newOrder = req.body.order;
-  if (Array.isArray(newOrder)) {
-    const ids = new Set();
-    state.order = newOrder.filter(
-      entry => entry && typeof entry.id === 'number' && !ids.has(entry.id) && ids.add(entry.id)
-    );
+  const { order } = req.body;
+  if (!Array.isArray(order)) {
+    return res.status(400).json({ error: 'Неверный формат данных' });
   }
-  res.sendStatus(200);
+
+  // Предполагается, что items — это массив всех элементов
+  const itemsMap = new Map(items.map(item => [item.id, item]));
+  const newItems = [];
+
+  for (const id of order) {
+    const item = itemsMap.get(id);
+    if (item) {
+      newItems.push(item);
+    }
+  }
+
+  // Обновление глобального порядка элементов
+  items = newItems;
+
+  res.status(200).json({ success: true });
 });
 
 app.post('/move', (req, res) => {
