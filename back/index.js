@@ -34,15 +34,7 @@ app.get('/items', (req, res) => {
     filtered = filtered.filter(({ id }) => id.toString().includes(search));
   }
 
-  // Поддержка сортировки отфильтрованного списка
-  const filteredIds = new Set(filtered.map(({ id }) => id));
-  const knownIds = new Set(state.order.map(o => o.id));
-  const missing = [...filteredIds].filter(id => !knownIds.has(id)).map(id => ({ id }));
-
-  if (missing.length > 0) {
-    state.order = [...state.order, ...missing];
-  }
-
+  // сортировка строго по state.order
   const orderMap = new Map(state.order.map(({ id }, index) => [id, index]));
   filtered.sort((a, b) => {
     const indexA = orderMap.get(a.id) ?? Infinity;

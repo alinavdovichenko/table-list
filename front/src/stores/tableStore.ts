@@ -155,10 +155,16 @@ class TableStore {
       runInAction(() => {
         this.items = updated;
       });
+  
+      // 🧩 Добавляем отправку нового порядка
+      const orderIds = updated.map(i => i.id);
+      await this.setOrder(orderIds);
+  
     } catch (error) {
       console.error('Ошибка при перемещении:', error);
     }
   }
+  
   
   async setOrder(order: number[]) {
     try {
