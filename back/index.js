@@ -100,6 +100,22 @@ app.post('/move', (req, res) => {
   res.sendStatus(200);
 });
 
+app.post('/order', (req, res) => {
+  const order = req.body.order;
+  if (!Array.isArray(order)) {
+    return res.status(400).send('Invalid order payload');
+  }
+
+  // Сброс порядка (например, начальный порядок)
+  if (order.length === 0) {
+    state.order = items.map(({ id }) => ({ id }));
+  } else {
+    state.order = order.map(id => ({ id }));
+  }
+
+  res.sendStatus(200);
+});
+
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

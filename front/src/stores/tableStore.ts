@@ -106,6 +106,9 @@ class TableStore {
         this.items = [];
         this.search = '';
         this.selected = [];
+        this.draggingItemId = null;
+        this.dragOverId = null;
+        this.dropPosition = null;
       });
 
       await this.fetchItems(true);
@@ -133,14 +136,20 @@ class TableStore {
     try {
       await API.post('/move', { fromId, toId, position });
   
-      // Оптимистичное обновление локального состояния
       const fromIndex = this.items.findIndex(i => i.id === fromId);
       const toIndex = this.items.findIndex(i => i.id === toId);
       if (fromIndex === -1 || toIndex === -1) return;
   
       const updated = [...this.items];
       const [moved] = updated.splice(fromIndex, 1);
-      const insertAt = position === 'before' ? toIndex : toIndex + 1;
+  
+      let insertAt;
+      if (position === 'before') {
+        insertAt = fromIndex < toIndex ? toIndex - 1 : toIndex;
+      } else {
+        insertAt = fromIndex < toIndex ? toIndex : toIndex + 1;
+      }
+  
       updated.splice(insertAt, 0, moved);
   
       runInAction(() => {
@@ -150,7 +159,6 @@ class TableStore {
       console.error('Ошибка при перемещении:', error);
     }
   }
-  
   
   async setOrder(order: number[]) {
     try {
