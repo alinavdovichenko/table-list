@@ -29,7 +29,7 @@ app.get('/items', (req, res) => {
   const limit = parseInt(req.query.limit || '20', 10);
   const search = state.search;
 
-  const orderMap = new Map(state.order.map((id, index) => [id, index]));
+  const orderMap = new Map(state.order.map((index, id) => [index, id]));
 
   const sortedItems = [...items].sort((a, b) => {
     const indexA = orderMap.get(a.id) ?? Infinity;
