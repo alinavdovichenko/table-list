@@ -33,10 +33,8 @@ class TableStore {
     if (!reset && this.items.length >= this.total) return;
 
     if (reset) {
-      runInAction(() => {
-        this.offset = 0;
-        this.items = [];
-      });
+      this.offset = 0;
+      this.items = [];
     }
 
     this.isLoading = true;
@@ -48,9 +46,10 @@ class TableStore {
 
       runInAction(() => {
         const fetched = res.data.items;
-        const newItems = fetched.filter(i => !this.items.find(existing => existing.id === i.id));
-        this.items = reset ? fetched : [...this.items, ...newItems];
+        const existingIds = new Set(this.items.map(i => i.id));
+        const newItems = fetched.filter(i => !existingIds.has(i.id));
 
+        this.items = reset ? fetched : [...this.items, ...newItems];
         this.total = res.data.total;
         this.selected = res.data.selected;
         this.search = res.data.search;
@@ -94,14 +93,6 @@ class TableStore {
     }
   }
 
-  async setOrder(order: Item[]) {
-    try {
-      await API.post('/order', { order });
-    } catch (error) {
-      console.error('Ошибка при обновлении порядка:', error);
-    }
-  }
-
   async resetAll() {
     try {
       await Promise.all([
@@ -109,10 +100,14 @@ class TableStore {
         API.post('/search', { search: '' }),
         API.post('/select', { selected: [] }),
       ]);
+
       runInAction(() => {
         this.offset = 0;
         this.items = [];
+        this.search = '';
+        this.selected = [];
       });
+
       await this.fetchItems(true);
     } catch (error) {
       console.error('Ошибка при сбросе:', error);
@@ -120,7 +115,6 @@ class TableStore {
   }
 
   setDragOver(id: number | null, position: 'before' | 'after' | null = null) {
-    if (this.dragOverId === id && this.dropPosition === position) return;
     this.dragOverId = id;
     this.dropPosition = position;
   }
@@ -138,11 +132,21 @@ class TableStore {
   async moveItemById(fromId: number, toId: number, position: 'before' | 'after' = 'before') {
     try {
       await API.post('/move', { fromId, toId, position });
-      runInAction(() => {
-        this.offset = 0;
-        this.items = [];
-      });
-      await this.fetchItems(true);
+
+      // Локальная перестановка элементов (опционально)
+      const indexFrom = this.items.findIndex(i => i.id === fromId);
+      const indexTo = this.items.findIndex(i => i.id === toId);
+      if (indexFrom !== -1 && indexTo !== -1) {
+        const updated = [...this.items];
+        const [moved] = updated.splice(indexFrom, 1);
+        let insertAt = indexTo;
+        if (position === 'after') insertAt = indexTo + (indexFrom < indexTo ? 0 : 1);
+        else insertAt = indexTo - (indexFrom < indexTo ? 1 : 0);
+        updated.splice(insertAt, 0, moved);
+        runInAction(() => {
+          this.items = updated;
+        });
+      }
     } catch (error) {
       console.error('Ошибка при перемещении:', error);
     }

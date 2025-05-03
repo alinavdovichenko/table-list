@@ -9,7 +9,7 @@ app.use(express.json());
 
 let state = {
   selected: [],
-  order: [], // [{ id }]
+  order: [],
   search: ''
 };
 
@@ -19,6 +19,7 @@ function generateItems(size) {
 
 const items = generateItems(1_000_000);
 
+// Инициализация порядка
 if (state.order.length === 0) {
   state.order = items.map(({ id }) => ({ id }));
 }
@@ -33,14 +34,12 @@ app.get('/items', (req, res) => {
     filtered = filtered.filter(({ id }) => id.toString().includes(search));
   }
 
-  if (state.order.length) {
-    const orderMap = new Map(state.order.map(({ id }, index) => [id, index]));
-    filtered = filtered.slice().sort((a, b) => {
-      const indexA = orderMap.has(a.id) ? orderMap.get(a.id) : Infinity;
-      const indexB = orderMap.has(b.id) ? orderMap.get(b.id) : Infinity;
-      return indexA - indexB;
-    });
-  }
+  const orderMap = new Map(state.order.map(({ id }, index) => [id, index]));
+  filtered.sort((a, b) => {
+    const indexA = orderMap.has(a.id) ? orderMap.get(a.id) : Infinity;
+    const indexB = orderMap.has(b.id) ? orderMap.get(b.id) : Infinity;
+    return indexA - indexB;
+  });
 
   const paged = filtered.slice(offset, offset + limit);
 
@@ -65,10 +64,9 @@ app.post('/select', (req, res) => {
 app.post('/order', (req, res) => {
   const newOrder = req.body.order;
   if (Array.isArray(newOrder)) {
+    const ids = new Set();
     state.order = newOrder.filter(
-      (entry, i, arr) =>
-        entry && typeof entry.id === 'number' &&
-        arr.findIndex(e => e.id === entry.id) === i
+      entry => entry && typeof entry.id === 'number' && !ids.has(entry.id) && ids.add(entry.id)
     );
   }
   res.sendStatus(200);
@@ -92,14 +90,9 @@ app.post('/move', (req, res) => {
   if (fromIndex === -1 || toIndex === -1) return res.sendStatus(400);
 
   const [moved] = currentOrder.splice(fromIndex, 1);
-
-  let insertIndex;
-  if (position === 'after') {
-    insertIndex = toIndex + (fromIndex < toIndex ? 0 : 1);
-  } else {
-    insertIndex = toIndex - (fromIndex < toIndex ? 1 : 0);
-  }
-
+  let insertIndex = position === 'after'
+    ? toIndex + (fromIndex < toIndex ? 0 : 1)
+    : toIndex - (fromIndex < toIndex ? 1 : 0);
   currentOrder.splice(insertIndex, 0, moved);
   state.order = currentOrder;
 
