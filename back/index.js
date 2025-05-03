@@ -1,5 +1,5 @@
-const express = require('express');
-const cors = require('cors');
+import express from 'express';
+import cors from 'cors';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -18,6 +18,8 @@ function generateItems(size) {
 }
 
 const items = generateItems(1_000_000);
+
+console.log('Первые элементы:', items.slice(0, 5));
 
 // Инициализация порядка
 if (state.order.length === 0) {
