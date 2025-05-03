@@ -87,6 +87,7 @@ class TableStore {
         this.items = [];
       });
       await this.fetchItems(true);
+      await this.fetchFullOrder();
     } catch (error) {
       console.error('Ошибка при установке поиска:', error);
     }
@@ -156,39 +157,27 @@ class TableStore {
     try {
       await API.post('/move', { fromId, toId, position });
   
-      const fromIndex = this.items.findIndex(i => i.id === fromId);
-      const toIndex = this.items.findIndex(i => i.id === toId);
-      if (fromIndex === -1 || toIndex === -1) return;
+      // Загружаем обновлённый порядок с сервера
+      const res = await API.get<number[]>('/order');
+      const updatedFullOrder = res.data;
   
-      const visibleItems = [...this.items];
-      const [movedItem] = visibleItems.splice(fromIndex, 1);
-  
-      let insertAt;
-      if (position === 'before') {
-        insertAt = fromIndex < toIndex ? toIndex - 1 : toIndex;
-      } else {
-        insertAt = fromIndex < toIndex ? toIndex : toIndex + 1;
-      }
-  
-      visibleItems.splice(insertAt, 0, movedItem);
-  
-      // Получаем ids всех отфильтрованных
-      const visibleIds = visibleItems.map(i => i.id);
-      // Получаем id'ы всех остальных (невидимых) в старом порядке
-      const invisible = this.fullOrder.filter(id => !visibleIds.includes(id));
-  
-      const fullOrder = [...visibleIds, ...invisible];
+      // Перестраиваем visibleItems из актуального порядка
+      const updatedVisibleIds = updatedFullOrder.filter(id =>
+        this.items.some(item => item.id === id)
+      );
+      const updatedVisibleItems = updatedVisibleIds.map(id =>
+        this.items.find(item => item.id === id)!
+      );
   
       runInAction(() => {
-        this.items = visibleItems;
+        this.fullOrder = updatedFullOrder;
+        this.items = updatedVisibleItems;
       });
-  
-      await this.setOrder(fullOrder);
-  
     } catch (error) {
       console.error('Ошибка при перемещении:', error);
     }
   }
+
 
   setFullOrder(order: number[]) {
     this.fullOrder = order;

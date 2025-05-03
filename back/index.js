@@ -1,5 +1,5 @@
-import express from 'express';
-import cors from 'cors';
+const express = require('express');
+const cors = require('cors');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -21,7 +21,7 @@ const items = generateItems(1_000_000);
 
 // Инициализация порядка
 if (state.order.length === 0) {
-  state.order = items.map(({ id }) => ({ id }));
+  state.order = items.map(({ id }) => id);
 }
 
 app.get('/items', (req, res) => {
@@ -29,16 +29,14 @@ app.get('/items', (req, res) => {
   const limit = parseInt(req.query.limit || '20', 10);
   const search = state.search;
 
-  const orderMap = new Map(state.order.map(({ id }, index) => [id, index]));
+  const orderMap = new Map(state.order.map((id, index) => [id, index]));
 
-  // Сортируем ВСЕ items по orderMap
   const sortedItems = [...items].sort((a, b) => {
     const indexA = orderMap.get(a.id) ?? Infinity;
     const indexB = orderMap.get(b.id) ?? Infinity;
     return indexA - indexB;
   });
 
-  // Применяем фильтр
   let filtered = sortedItems;
   if (search) {
     filtered = sortedItems.filter(({ id }) => id.toString().includes(search));
@@ -53,7 +51,6 @@ app.get('/items', (req, res) => {
     search: state.search
   });
 });
-
 
 app.post('/search', (req, res) => {
   state.search = req.body.search || '';
@@ -78,8 +75,8 @@ app.post('/move', (req, res) => {
   }
 
   const currentOrder = [...state.order];
-  const fromIndex = currentOrder.findIndex(i => i.id === fromId);
-  const toIndex = currentOrder.findIndex(i => i.id === toId);
+  const fromIndex = currentOrder.indexOf(fromId);
+  const toIndex = currentOrder.indexOf(toId);
   if (fromIndex === -1 || toIndex === -1) return res.sendStatus(400);
 
   const [moved] = currentOrder.splice(fromIndex, 1);
@@ -103,24 +100,21 @@ app.post('/order', (req, res) => {
   }
 
   if (order.length === 0) {
-    // Сброс к начальному порядку
-    state.order = items.map(({ id }) => ({ id }));
+    state.order = items.map(({ id }) => id); // сброс
   } else {
-    // Построим новую карту порядка
     const orderSet = new Set(order);
     const remaining = items
       .filter(({ id }) => !orderSet.has(id))
-      .map(({ id }) => ({ id }));
+      .map(({ id }) => id);
 
-    // Объединяем: сначала новые, затем недостающие (в исходном порядке)
-    state.order = [...order.map(id => ({ id })), ...remaining];
+    state.order = [...order, ...remaining];
   }
 
   res.sendStatus(200);
 });
 
 app.get('/order', (req, res) => {
-  res.json(state.order.map(({ id }) => id));
+  res.json(state.order);
 });
 
 app.listen(PORT, () => {
