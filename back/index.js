@@ -34,10 +34,19 @@ app.get('/items', (req, res) => {
     filtered = filtered.filter(({ id }) => id.toString().includes(search));
   }
 
+  // Поддержка сортировки отфильтрованного списка
+  const filteredIds = new Set(filtered.map(({ id }) => id));
+  const knownIds = new Set(state.order.map(o => o.id));
+  const missing = [...filteredIds].filter(id => !knownIds.has(id)).map(id => ({ id }));
+
+  if (missing.length > 0) {
+    state.order = [...state.order, ...missing];
+  }
+
   const orderMap = new Map(state.order.map(({ id }, index) => [id, index]));
   filtered.sort((a, b) => {
-    const indexA = orderMap.has(a.id) ? orderMap.get(a.id) : Infinity;
-    const indexB = orderMap.has(b.id) ? orderMap.get(b.id) : Infinity;
+    const indexA = orderMap.get(a.id) ?? Infinity;
+    const indexB = orderMap.get(b.id) ?? Infinity;
     return indexA - indexB;
   });
 
@@ -59,29 +68,6 @@ app.post('/search', (req, res) => {
 app.post('/select', (req, res) => {
   state.selected = req.body.selected || [];
   res.sendStatus(200);
-});
-
-app.post('/order', (req, res) => {
-  const { order } = req.body;
-  if (!Array.isArray(order)) {
-    return res.status(400).json({ error: 'Неверный формат данных' });
-  }
-
-  // Предполагается, что items — это массив всех элементов
-  const itemsMap = new Map(items.map(item => [item.id, item]));
-  const newItems = [];
-
-  for (const id of order) {
-    const item = itemsMap.get(id);
-    if (item) {
-      newItems.push(item);
-    }
-  }
-
-  // Обновление глобального порядка элементов
-  items = newItems;
-
-  res.status(200).json({ success: true });
 });
 
 app.post('/move', (req, res) => {

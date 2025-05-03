@@ -131,6 +131,9 @@ class TableStore {
 
   async moveItemById(fromId: number, toId: number, position: 'before' | 'after' = 'before') {
     try {
+      await API.post('/move', { fromId, toId, position });
+  
+      // Оптимистичное обновление локального состояния
       const fromIndex = this.items.findIndex(i => i.id === fromId);
       const toIndex = this.items.findIndex(i => i.id === toId);
       if (fromIndex === -1 || toIndex === -1) return;
@@ -140,9 +143,6 @@ class TableStore {
       const insertAt = position === 'before' ? toIndex : toIndex + 1;
       updated.splice(insertAt, 0, moved);
   
-      const newOrder = updated.map(i => i.id);
-      await API.post('/order', { order: newOrder });
-  
       runInAction(() => {
         this.items = updated;
       });
@@ -150,6 +150,7 @@ class TableStore {
       console.error('Ошибка при перемещении:', error);
     }
   }
+  
   
   async setOrder(order: number[]) {
     try {
