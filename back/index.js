@@ -88,14 +88,18 @@ app.post('/move', (req, res) => {
   if (fromIndex === -1 || toIndex === -1) return res.sendStatus(400);
 
   const [moved] = currentOrder.splice(fromIndex, 1);
-  let insertIndex = position === 'after'
-    ? toIndex + (fromIndex < toIndex ? 0 : 1)
-    : toIndex - (fromIndex < toIndex ? 1 : 0);
+
+  const insertIndex =
+    position === 'after'
+      ? toIndex + (fromIndex < toIndex ? -1 : 1)
+      : toIndex - (fromIndex < toIndex ? 0 : 1);
+
   currentOrder.splice(insertIndex, 0, moved);
   state.order = currentOrder;
 
   res.sendStatus(200);
 });
+
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
