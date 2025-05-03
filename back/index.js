@@ -29,18 +29,20 @@ app.get('/items', (req, res) => {
   const limit = parseInt(req.query.limit || '20', 10);
   const search = state.search;
 
-  let filtered = items;
-  if (search) {
-    filtered = filtered.filter(({ id }) => id.toString().includes(search));
-  }
-
-  // сортировка строго по state.order
   const orderMap = new Map(state.order.map(({ id }, index) => [id, index]));
-  filtered.sort((a, b) => {
+
+  // Сортируем ВСЕ items по orderMap
+  const sortedItems = [...items].sort((a, b) => {
     const indexA = orderMap.get(a.id) ?? Infinity;
     const indexB = orderMap.get(b.id) ?? Infinity;
     return indexA - indexB;
   });
+
+  // Применяем фильтр
+  let filtered = sortedItems;
+  if (search) {
+    filtered = sortedItems.filter(({ id }) => id.toString().includes(search));
+  }
 
   const paged = filtered.slice(offset, offset + limit);
 
@@ -51,6 +53,7 @@ app.get('/items', (req, res) => {
     search: state.search
   });
 });
+
 
 app.post('/search', (req, res) => {
   state.search = req.body.search || '';
@@ -94,15 +97,23 @@ app.post('/move', (req, res) => {
 
 app.post('/order', (req, res) => {
   const order = req.body.order;
+
   if (!Array.isArray(order)) {
     return res.status(400).send('Invalid order payload');
   }
 
-  // Сброс порядка (например, начальный порядок)
   if (order.length === 0) {
+    // Сброс к начальному порядку
     state.order = items.map(({ id }) => ({ id }));
   } else {
-    state.order = order.map(id => ({ id }));
+    // Построим новую карту порядка
+    const orderSet = new Set(order);
+    const remaining = items
+      .filter(({ id }) => !orderSet.has(id))
+      .map(({ id }) => ({ id }));
+
+    // Объединяем: сначала новые, затем недостающие (в исходном порядке)
+    state.order = [...order.map(id => ({ id })), ...remaining];
   }
 
   res.sendStatus(200);

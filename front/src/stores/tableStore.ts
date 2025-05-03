@@ -67,11 +67,16 @@ class TableStore {
   async setSearch(search: string) {
     try {
       await API.post('/search', { search });
+      runInAction(() => {
+        this.offset = 0;
+        this.items = [];
+      });
       await this.fetchItems(true);
     } catch (error) {
       console.error('Ошибка при установке поиска:', error);
     }
   }
+  
 
   selectItem(id: number) {
     if (!this.selected.includes(id)) {
@@ -164,7 +169,6 @@ class TableStore {
       console.error('Ошибка при перемещении:', error);
     }
   }
-  
   
   async setOrder(order: number[]) {
     try {
