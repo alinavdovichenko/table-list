@@ -70,7 +70,7 @@ class TableStore {
 
   async fetchFullOrder() {
     try {
-      const res = await API.get<number[]>('/order'); // или другой эндпоинт, который возвращает порядок всех ID
+      const res = await API.get<number[]>('/order');
       runInAction(() => {
         this.setFullOrder(res.data);
       });
@@ -202,7 +202,6 @@ class TableStore {
       console.error('Ошибка при перемещении:', error);
     }
   }
-  
 
   setFullOrder(order: number[]) {
     this.fullOrder = order;
@@ -215,7 +214,6 @@ class TableStore {
       console.error('Ошибка при обновлении порядка:', error);
     }
   }
-  
 }
 
 const store = new TableStore();

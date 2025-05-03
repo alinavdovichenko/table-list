@@ -14,7 +14,7 @@ let state = {
 };
 
 function generateItems(size) {
-  return Array.from({ length: size }, (_, i) => ({ id: i + 1 }));
+  return Array.from({ length: size }, (_, i) => ({ id: i + 2 }));
 }
 
 const items = generateItems(1_000_000);
