@@ -31,28 +31,30 @@ app.get('/items', (req, res) => {
   const limit = parseInt(req.query.limit || '20', 10);
   const search = state.search;
 
-  const orderMap = new Map(state.order.map((id, index) => [id, index]));
-
-  const sortedItems = [...items].sort((a, b) => {
-    const indexA = orderMap.get(a.id) ?? Infinity;
-    const indexB = orderMap.get(b.id) ?? Infinity;
-    return indexA - indexB;
-  });
-
-  let filtered = sortedItems;
-  if (search) {
-    filtered = sortedItems.filter(({ id }) => id.toString().includes(search));
+  // Если порядок вдруг пуст — инициализируем
+  if (state.order.length === 0) {
+    state.order = items.map(({ id }) => id);
   }
 
-  const paged = filtered.slice(offset, offset + limit);
+  let filteredIds = state.order;
+
+  if (search) {
+    filteredIds = filteredIds.filter(id => id.toString().includes(search));
+  }
+
+  const total = filteredIds.length;
+
+  const pagedIds = filteredIds.slice(offset, offset + limit);
+  const pagedItems = pagedIds.map(id => ({ id }));
 
   res.json({
-    items: paged,
-    total: filtered.length,
+    items: pagedItems,
+    total,
     selected: state.selected,
-    search: state.search
+    search: state.search,
   });
 });
+;
 
 app.post('/search', (req, res) => {
   state.search = req.body.search || '';
