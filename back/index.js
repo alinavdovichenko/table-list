@@ -101,25 +101,25 @@ app.post('/order', (req, res) => {
     return res.status(400).send('Invalid order payload');
   }
 
+  // Полный сброс — вернуть порядок к изначальному
   if (order.length === 0) {
-    state.order = items.map(({ id }) => id); // полный сброс
-  } else {
-    const newOrderSet = new Set(order);
-    const newOrder = [...state.order]; // работаем с текущим порядком
-    let i = 0;
-  
-    // Заменяем только те элементы, которые есть в переданном order
-    for (let j = 0; j < newOrder.length && i < order.length; j++) {
-      if (newOrderSet.has(newOrder[j])) {
-        newOrder[j] = order[i++];
-      }
-    }
-  
-    state.order = newOrder;
-  }  
+    state.order = items.map(({ id }) => id);
+    return res.sendStatus(200);
+  }
 
+  // Убедимся, что все id валидные числа и есть в оригинальных items
+  const itemIdsSet = new Set(items.map(({ id }) => id));
+  const allValid = order.every((id) => typeof id === 'number' && itemIdsSet.has(id));
+
+  if (!allValid) {
+    return res.status(400).send('Order contains invalid item IDs');
+  }
+
+  // Установка нового порядка
+  state.order = order;
   res.sendStatus(200);
 });
+
 
 app.get('/order', (req, res) => {
   res.json(state.order);

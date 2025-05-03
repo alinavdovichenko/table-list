@@ -47,25 +47,26 @@ class TableStore {
 
       runInAction(() => {
         const fetched = res.data.items;
-        console.log(fetched);
-        if (reset) {
-          this.items = fetched;
-        } else {
-          const map = new Map(this.items.map(item => [item.id, item]));
-          fetched.forEach(item => {
-            map.set(item.id, item); // обновит существующие и добавит новые
-          });
-          this.items = Array.from(map.values());
-        }
-        
+        const map = new Map(this.items.map(item => [item.id, item]));
+        fetched.forEach(item => map.set(item.id, item)); // обновим/добавим
+      
+        const merged = Array.from(map.values());
+      
+        const orderSet = new Set(this.fullOrder);
+        this.items = merged
+          .filter(item => orderSet.has(item.id))
+          .sort((a, b) => this.fullOrder.indexOf(a.id) - this.fullOrder.indexOf(b.id));
+      
         this.total = res.data.total;
         this.selected = res.data.selected;
         this.search = res.data.search;
         this.offset += this.limit;
+      
         if (reset && this.search === '') {
           this.setFullOrder(this.items.map(item => item.id));
         }
       });
+      
     } catch (error) {
       console.error('Ошибка при загрузке:', error);
     } finally {
@@ -93,13 +94,15 @@ class TableStore {
         this.offset = 0;
         this.items = [];
       });
-      await this.fetchItems(true);
+
       await this.fetchFullOrder();
+      await this.fetchItems(true);
+      
     } catch (error) {
       console.error('Ошибка при установке поиска:', error);
     }
   }
-  
+
   selectItem(id: number) {
     if (!this.selected.includes(id)) {
       this.selected.push(id);
@@ -161,49 +164,48 @@ class TableStore {
     this.dropPosition = null;
     this.draggingItemId = null;
   }
+
   async moveItemById(fromId: number, toId: number, position: 'before' | 'after' = 'before') {
     try {
       await API.post('/move', { fromId, toId, position });
-  
+
       const visibleIds = this.items.map(i => i.id);
       const fullOrder = [...this.fullOrder];
-  
-      // Получаем все позиции видимых элементов в fullOrder
+
       const visiblePositions = fullOrder
         .map((id, idx) => ({ id, idx }))
         .filter(entry => visibleIds.includes(entry.id));
-  
+
       const currentVisibleOrder = visiblePositions.map(v => v.id);
       const fromIndex = currentVisibleOrder.indexOf(fromId);
       const toIndex = currentVisibleOrder.indexOf(toId);
-  
+
       if (fromIndex === -1 || toIndex === -1) return;
-  
+
       const updatedVisibleOrder = [...currentVisibleOrder];
       const [movedId] = updatedVisibleOrder.splice(fromIndex, 1);
       const insertAt =
         position === 'before'
           ? fromIndex < toIndex ? toIndex - 1 : toIndex
           : fromIndex < toIndex ? toIndex : toIndex + 1;
-  
+
       updatedVisibleOrder.splice(insertAt, 0, movedId);
-  
-      // Теперь создаём новый fullOrder, заменяя видимые ID в тех же позициях
+
       const newFullOrder = [...fullOrder];
       visiblePositions.forEach((entry, i) => {
         newFullOrder[entry.idx] = updatedVisibleOrder[i];
       });
-  
+
       runInAction(() => {
         this.fullOrder = newFullOrder;
-  
-        // Перестраиваем только видимую часть списка
-        const visibleSet = new Set(updatedVisibleOrder);
+
+        const itemMap = new Map(this.items.map(item => [item.id, item]));
         this.items = newFullOrder
-          .filter(id => visibleSet.has(id))
-          .map(id => ({ id }));
+          .filter(id => visibleIds.includes(id))
+          .map(id => itemMap.get(id)!)
+          .filter(Boolean);
       });
-  
+
       await this.setOrder(newFullOrder);
     } catch (error) {
       console.error('Ошибка при перемещении:', error);
@@ -213,7 +215,7 @@ class TableStore {
   setFullOrder(order: number[]) {
     this.fullOrder = order;
   }
-  
+
   async setOrder(order: number[]) {
     try {
       await API.post('/order', { order });
