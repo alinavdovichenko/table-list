@@ -4,7 +4,9 @@ import cors from 'cors';
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(cors());
+app.use(cors({
+  origin: '*'
+}));
 app.use(express.json());
 
 let state = {
@@ -18,8 +20,6 @@ function generateItems(size) {
 }
 
 const items = generateItems(1_000_000);
-
-console.log('Первые элементы:', items.slice(0, 5));
 
 // Инициализация порядка
 if (state.order.length === 0) {

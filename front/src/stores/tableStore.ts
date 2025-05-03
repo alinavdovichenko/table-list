@@ -198,7 +198,7 @@ class TableStore {
         this.fullOrder = newFullOrder;
   
         // Перестраиваем только видимую часть списка
-        const visibleSet = new Set(visibleIds);
+        const visibleSet = new Set(updatedVisibleOrder);
         this.items = newFullOrder
           .filter(id => visibleSet.has(id))
           .map(id => ({ id }));
