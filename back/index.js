@@ -14,7 +14,7 @@ let state = {
 };
 
 function generateItems(size) {
-  return Array.from({ length: size }, (_, i) => ({ id: i }));
+  return Array.from({ length: size }, (_, i) => ({ id: i + 1 }));
 }
 
 const items = generateItems(1_000_000);
@@ -100,15 +100,21 @@ app.post('/order', (req, res) => {
   }
 
   if (order.length === 0) {
-    state.order = items.map(({ id }) => id); // сброс
+    state.order = items.map(({ id }) => id); // полный сброс
   } else {
-    const orderSet = new Set(order);
-    const remaining = items
-      .filter(({ id }) => !orderSet.has(id))
-      .map(({ id }) => id);
-
-    state.order = [...order, ...remaining];
-  }
+    const newOrderSet = new Set(order);
+    const newOrder = [...state.order]; // работаем с текущим порядком
+    let i = 0;
+  
+    // Заменяем только те элементы, которые есть в переданном order
+    for (let j = 0; j < newOrder.length && i < order.length; j++) {
+      if (newOrderSet.has(newOrder[j])) {
+        newOrder[j] = order[i++];
+      }
+    }
+  
+    state.order = newOrder;
+  }  
 
   res.sendStatus(200);
 });

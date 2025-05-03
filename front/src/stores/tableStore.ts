@@ -131,8 +131,10 @@ class TableStore {
         this.dropPosition = null;
       });
 
-      await this.fetchFullOrder();
-      await this.fetchItems(true);
+      await Promise.all([
+        this.fetchFullOrder(),
+        this.fetchItems(true),
+      ]);
     } catch (error) {
       console.error('Ошибка при сбросе:', error);
     }
@@ -152,32 +154,55 @@ class TableStore {
     this.dropPosition = null;
     this.draggingItemId = null;
   }
-
   async moveItemById(fromId: number, toId: number, position: 'before' | 'after' = 'before') {
     try {
       await API.post('/move', { fromId, toId, position });
   
-      // Загружаем обновлённый порядок с сервера
-      const res = await API.get<number[]>('/order');
-      const updatedFullOrder = res.data;
+      const visibleIds = this.items.map(i => i.id);
+      const fullOrder = [...this.fullOrder];
   
-      // Перестраиваем visibleItems из актуального порядка
-      const updatedVisibleIds = updatedFullOrder.filter(id =>
-        this.items.some(item => item.id === id)
-      );
-      const updatedVisibleItems = updatedVisibleIds.map(id =>
-        this.items.find(item => item.id === id)!
-      );
+      // Получаем все позиции видимых элементов в fullOrder
+      const visiblePositions = fullOrder
+        .map((id, idx) => ({ id, idx }))
+        .filter(entry => visibleIds.includes(entry.id));
+  
+      const currentVisibleOrder = visiblePositions.map(v => v.id);
+      const fromIndex = currentVisibleOrder.indexOf(fromId);
+      const toIndex = currentVisibleOrder.indexOf(toId);
+  
+      if (fromIndex === -1 || toIndex === -1) return;
+  
+      const updatedVisibleOrder = [...currentVisibleOrder];
+      const [movedId] = updatedVisibleOrder.splice(fromIndex, 1);
+      const insertAt =
+        position === 'before'
+          ? fromIndex < toIndex ? toIndex - 1 : toIndex
+          : fromIndex < toIndex ? toIndex : toIndex + 1;
+  
+      updatedVisibleOrder.splice(insertAt, 0, movedId);
+  
+      // Теперь создаём новый fullOrder, заменяя видимые ID в тех же позициях
+      const newFullOrder = [...fullOrder];
+      visiblePositions.forEach((entry, i) => {
+        newFullOrder[entry.idx] = updatedVisibleOrder[i];
+      });
   
       runInAction(() => {
-        this.fullOrder = updatedFullOrder;
-        this.items = updatedVisibleItems;
+        this.fullOrder = newFullOrder;
+  
+        // Перестраиваем только видимую часть списка
+        const visibleSet = new Set(visibleIds);
+        this.items = newFullOrder
+          .filter(id => visibleSet.has(id))
+          .map(id => ({ id }));
       });
+  
+      await this.setOrder(newFullOrder);
     } catch (error) {
       console.error('Ошибка при перемещении:', error);
     }
   }
-
+  
 
   setFullOrder(order: number[]) {
     this.fullOrder = order;
