@@ -47,10 +47,17 @@ class TableStore {
 
       runInAction(() => {
         const fetched = res.data.items;
-        const existingIds = new Set(this.items.map(i => i.id));
-        const newItems = fetched.filter(i => !existingIds.has(i.id));
-
-        this.items = res.data.items;
+        console.log(fetched);
+        if (reset) {
+          this.items = fetched;
+        } else {
+          const map = new Map(this.items.map(item => [item.id, item]));
+          fetched.forEach(item => {
+            map.set(item.id, item); // обновит существующие и добавит новые
+          });
+          this.items = Array.from(map.values());
+        }
+        
         this.total = res.data.total;
         this.selected = res.data.selected;
         this.search = res.data.search;
