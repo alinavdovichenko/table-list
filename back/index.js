@@ -56,7 +56,7 @@ app.post('/select', (req, res) => {
   res.sendStatus(200);
 });
 
-app.post('/move', (req, res) => {
+app.post('/order', (req, res) => {
   const { fromId, toId, position } = req.body;
 
   if (
@@ -100,38 +100,6 @@ app.post('/move', (req, res) => {
   });
 
   res.sendStatus(200);
-});
-
-app.post('/order', (req, res) => {
-  const updated = req.body.order;
-
-  if (!Array.isArray(updated)) {
-    return res.status(400).send('Invalid order payload');
-  }
-
-  for (const item of updated) {
-    if (
-      typeof item !== 'object' ||
-      typeof item.index !== 'number' ||
-      typeof item.id !== 'number'
-    ) {
-      return res.status(400).send('Invalid item format');
-    }
-  }
-
-  // Применяем переданный порядок: только обновляем `id` по `index`
-  for (const { index, id } of updated) {
-    const entry = state.order.find(o => o.index === index);
-    if (entry) {
-      entry.id = id;
-    }
-  }
-
-  res.sendStatus(200);
-});
-
-app.get('/order', (req, res) => {
-  res.json(state.order);
 });
 
 app.listen(PORT, () => {

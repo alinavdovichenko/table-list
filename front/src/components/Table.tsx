@@ -3,6 +3,7 @@ import store from '../stores/tableStore';
 import { observer } from 'mobx-react-lite';
 import { ItemRow } from './ItemRow';
 import { LoaderSentinel } from './LoaderSentinel';
+import { autorun } from 'mobx';
 
 export const Table: React.FC = observer(() => {
   const sentinelRef = useRef<HTMLDivElement | null>(null);
@@ -28,6 +29,14 @@ export const Table: React.FC = observer(() => {
     };
   }, []);
 
+  useEffect(() => {
+    const disposer = autorun(() => {
+      setSearchValue(store.search);
+    });
+  
+    return () => disposer();
+  }, []);
+
   const handleSearch = () => {
     const trimmed = searchValue.trim();
     if (trimmed !== store.search) {
@@ -48,7 +57,7 @@ export const Table: React.FC = observer(() => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchValue(value);
-    if (value.trim() === '' && store.search !== '') {
+    if (value.trim() === '') {
       store.setSearch('');
     }
   };
