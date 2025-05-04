@@ -59,6 +59,11 @@ app.post('/select', (req, res) => {
 app.post('/order', (req, res) => {
   const { fromId, toId, position } = req.body;
 
+  if (!fromId && !toId && !position) {
+    state.order = items.map(({ index, id }) => ({ index, id }));
+    return res.status(200).send('Order reset to initial');
+  }
+
   if (
     typeof fromId !== 'number' ||
     typeof toId !== 'number' ||

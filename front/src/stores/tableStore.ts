@@ -106,7 +106,7 @@ class TableStore {
   async resetAll() {
     try {
       await Promise.all([
-        API.post('/order', { order: [] }),
+        API.post('/order', {}),
         API.post('/search', { search: '' }),
         API.post('/select', { selected: [] }),
       ]);
@@ -145,7 +145,7 @@ class TableStore {
   }
 
   async moveItemById(fromId: number, toId: number, position: 'before' | 'after' = 'before') {
-    try {
+    try {/*
       const fromIndex = this.items.findIndex(item => item.id === fromId);
       const toIndex = this.items.findIndex(item => item.id === toId);
       if (fromIndex === -1 || toIndex === -1 || fromId === toId) return;
@@ -161,11 +161,10 @@ class TableStore {
           : (fromIndex < toIndex ? toIndex : toIndex + 1);
   
       updatedItems.splice(insertIndex, 0, movedItem);
-  
-      // 🖼 Обновляем только UI
+
       runInAction(() => {
         this.items = updatedItems;
-      });
+      });*/
 
       await this.setOrder(fromId, toId, position);
       await this.fetchItems(true);
@@ -180,7 +179,7 @@ class TableStore {
       return;
     }
     try {
-      await API.post('/order', { fromId: fromId, toId: toId, position});
+      await API.post('/order', { fromId: fromId, toId: toId, position });
     } catch (error) {
       console.error('Ошибка при сохранении порядка:', error);
     }
