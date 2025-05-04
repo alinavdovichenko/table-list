@@ -175,49 +175,66 @@ class TableStore {
       const fromItem = this.items.find(i => i.id === fromId);
       const toItem = this.items.find(i => i.id === toId);
       if (!fromItem || !toItem) return;
-
-      //const { index: fromIndex } = fromItem;
-      //const { index: toIndex } = toItem;
-
-      const newOrder = new Map(this.fullOrder);
-
-      const indexes = Array.from(newOrder.keys()).sort((a, b) => a - b);
-      const currentIds = indexes.map(index => newOrder.get(index)!);
-
-      const oldPos = currentIds.indexOf(fromId);
-      const newPos = currentIds.indexOf(toId);
-
+  
+      const fromIndex = fromItem.index;
+      const toIndex = toItem.index;
+  
+      const start = Math.min(fromIndex, toIndex);
+      const end = Math.max(fromIndex, toIndex);
+  
+      const rangeIndexes = Array.from({ length: end - start + 1 }, (_, i) => start + i);
+      const rangeIds = rangeIndexes.map(index => this.fullOrder.get(index)!).filter(id => id !== undefined);
+  
+      // перемещаем только id, index остаются фиксированными
+      const oldPos = rangeIds.indexOf(fromId);
+      const newPos = rangeIds.indexOf(toId);
       if (oldPos === -1 || newPos === -1) return;
-
-      const updatedIds = [...currentIds];
+  
+      const updatedIds = [...rangeIds];
       const [movedId] = updatedIds.splice(oldPos, 1);
+  
       const insertAt = position === 'before'
         ? (oldPos < newPos ? newPos - 1 : newPos)
         : (oldPos < newPos ? newPos : newPos + 1);
-
+  
       updatedIds.splice(insertAt, 0, movedId);
-
-      const updatedOrderArray = indexes.map((index, i) => ({
+  
+      // Формируем массив объектов с index и новым id
+      const updatedOrderArray = rangeIndexes.map((index, i) => ({
         index,
         id: updatedIds[i],
       }));
-
+  
       console.log('📤 Отправка нового порядка:', updatedOrderArray);
-
+  
       await this.setOrder(updatedOrderArray);
-
+  
       runInAction(() => {
-        this.setFullOrder(new Map(updatedOrderArray.map(e => [e.index, e.id])));
-
+        // обновляем глобальный порядок
+        const newOrder = new Map(this.fullOrder);
+        for (const { index, id } of updatedOrderArray) {
+          newOrder.set(index, id);
+        }
+        this.setFullOrder(newOrder);
+  
+        // локально обновим items (чтобы не ждать повторного fetchItems)
         const itemMap = new Map(this.items.map(item => [item.id, item]));
-        this.items = updatedIds
+        const updatedItems = updatedIds
           .map(id => itemMap.get(id))
           .filter(Boolean) as Item[];
+  
+        // Вставляем их обратно по их индексам
+        const newItemsMap = new Map(this.items.map(item => [item.index, item]));
+        updatedItems.forEach(item => newItemsMap.set(item.index, item));
+  
+        this.items = Array.from(newItemsMap.values()).sort((a, b) => a.index - b.index);
       });
+  
     } catch (error) {
       console.error('❌ Ошибка при перемещении:', error);
     }
   }
+  
 
   setFullOrder(order: Map<number, number>) {
     this.fullOrder = order;

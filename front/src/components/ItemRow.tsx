@@ -25,30 +25,34 @@ export const ItemRow: React.FC<ItemRowProps> = observer(({ id }) => {
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    const fromId = parseInt(e.dataTransfer.getData('text/plain'), 10);
+  
+    const fromId = store.draggingItemId;
     const toId = id;
-
-    if (fromId !== toId && dropPosition) {
+  
+    if (fromId !== null && toId !== fromId && dropPosition) {
       store.moveItemById(fromId, toId, dropPosition);
     }
-
+  
     store.clearDragState();
   };
+  
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    const fromId = parseInt(e.dataTransfer.getData('text/plain'), 10);
-    if (fromId === id) {
+  
+    const fromId = store.draggingItemId;
+    if (fromId === null || fromId === id) {
       store.clearDragState();
       return;
     }
-
+  
     const rect = e.currentTarget.getBoundingClientRect();
     const midpoint = rect.top + rect.height / 2;
     const position = e.clientY < midpoint ? 'before' : 'after';
-
+  
     store.setDragOver(id, position);
   };
+  
 
   const handleDragLeave = () => {
     store.clearDragState();

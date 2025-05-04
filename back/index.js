@@ -9,7 +9,7 @@ app.use(express.json());
 
 let state = {
   selected: [],
-  order: [],
+  order: [], // Массив объектов: { index, id }
   search: ''
 };
 
@@ -21,7 +21,7 @@ const items = generateItems(1_000_000);
 
 // Инициализация порядка
 if (state.order.length === 0) {
-  state.order = items.map(({ id }) => id);
+  state.order = items.map(({ index, id }) => ({ index, id }));
 }
 
 app.get('/items', (req, res) => {
@@ -29,21 +29,14 @@ app.get('/items', (req, res) => {
   const limit = parseInt(req.query.limit || '20', 10);
   const search = state.search;
 
-  if (state.order.length === 0) {
-    state.order = items.map(({ id }) => id);
-  }
+  let filtered = state.order;
 
-  let filteredIds = state.order;
   if (search) {
-    filteredIds = filteredIds.filter(id => id.toString().includes(search));
+    filtered = filtered.filter(({ id }) => id.toString().includes(search));
   }
 
-  const total = filteredIds.length;
-  const pagedIds = filteredIds.slice(offset, offset + limit);
-  const pagedItems = pagedIds.map(id => {
-    const original = items.find(i => i.id === id);
-    return { id: id, index: original?.index ?? -1 };
-  });
+  const total = filtered.length;
+  const pagedItems = filtered.slice(offset, offset + limit);
 
   res.json({
     items: pagedItems,
@@ -71,31 +64,46 @@ app.post('/move', (req, res) => {
     typeof toId !== 'number' ||
     !['before', 'after'].includes(position)
   ) {
-    console.warn('Invalid move payload:', req.body);
     return res.status(400).send('Invalid move payload');
   }
 
-  const currentOrder = [...state.order];
-  const fromIndex = currentOrder.indexOf(fromId);
-  const toIndex = currentOrder.indexOf(toId);
-  if (fromIndex === -1 || toIndex === -1) return res.sendStatus(400);
+  // Находим индекс элемента по fromId и toId
+  const fromIdx = state.order.findIndex(item => item.id === fromId);
+  const toIdx = state.order.findIndex(item => item.id === toId);
 
-  const [moved] = currentOrder.splice(fromIndex, 1);
-  const insertIndex =
-    position === 'after'
-      ? toIndex + (fromIndex < toIndex ? -1 : 1)
-      : toIndex - (fromIndex < toIndex ? 0 : 1);
+  if (fromIdx === -1 || toIdx === -1) {
+    return res.status(400).send('IDs not found');
+  }
 
-  currentOrder.splice(insertIndex, 0, moved);
-  state.order = currentOrder;
+  // Определяем границы диапазона, который нужно сдвинуть
+  let start = Math.min(fromIdx, toIdx);
+  let end = Math.max(fromIdx, toIdx);
+
+  const subrange = state.order.slice(start, end + 1); // Включительно
+  const ids = subrange.map(item => item.id);
+
+  if (fromIdx < toIdx) {
+    // Сдвиг вниз
+    const movedId = ids.shift(); // удалить fromId
+    const insertPos = position === 'before' ? toIdx - start : toIdx - start + 1;
+    ids.splice(insertPos, 0, movedId);
+  } else {
+    // Сдвиг вверх
+    const movedId = ids.splice(fromIdx - start, 1)[0]; // удалить fromId
+    const insertPos = position === 'before' ? toIdx - start : toIdx - start + 1;
+    ids.splice(insertPos, 0, movedId);
+  }
+
+  // Применяем новую последовательность id в order
+  ids.forEach((id, i) => {
+    state.order[start + i].id = id;
+  });
 
   res.sendStatus(200);
 });
 
 app.post('/order', (req, res) => {
   const updated = req.body.order;
-
-  console.log('SET ORDER:', updated);
 
   if (!Array.isArray(updated)) {
     return res.status(400).send('Invalid order payload');
@@ -111,12 +119,14 @@ app.post('/order', (req, res) => {
     }
   }
 
-  const newOrder = [...state.order];
+  // Применяем переданный порядок: только обновляем `id` по `index`
   for (const { index, id } of updated) {
-    newOrder[index] = id;
+    const entry = state.order.find(o => o.index === index);
+    if (entry) {
+      entry.id = id;
+    }
   }
 
-  state.order = newOrder;
   res.sendStatus(200);
 });
 
