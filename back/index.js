@@ -4,9 +4,7 @@ import cors from 'cors';
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(cors({
-  origin: '*'
-}));
+app.use(cors({ origin: '*' }));
 app.use(express.json());
 
 let state = {
@@ -16,7 +14,7 @@ let state = {
 };
 
 function generateItems(size) {
-  return Array.from({ length: size }, (_, i) => ({ id: i + 1 }));
+  return Array.from({ length: size }, (_, i) => ({ id: i + 1, index: i }));
 }
 
 const items = generateItems(1_000_000);
@@ -31,21 +29,21 @@ app.get('/items', (req, res) => {
   const limit = parseInt(req.query.limit || '20', 10);
   const search = state.search;
 
-  // Если порядок вдруг пуст — инициализируем
   if (state.order.length === 0) {
     state.order = items.map(({ id }) => id);
   }
 
   let filteredIds = state.order;
-
   if (search) {
     filteredIds = filteredIds.filter(id => id.toString().includes(search));
   }
 
   const total = filteredIds.length;
-
   const pagedIds = filteredIds.slice(offset, offset + limit);
-  const pagedItems = pagedIds.map(id => ({ id }));
+  const pagedItems = pagedIds.map(id => {
+    const original = items.find(i => i.id === id);
+    return { id: id, index: original?.index ?? -1 };
+  });
 
   res.json({
     items: pagedItems,
@@ -54,7 +52,6 @@ app.get('/items', (req, res) => {
     search: state.search,
   });
 });
-;
 
 app.post('/search', (req, res) => {
   state.search = req.body.search || '';
@@ -84,7 +81,6 @@ app.post('/move', (req, res) => {
   if (fromIndex === -1 || toIndex === -1) return res.sendStatus(400);
 
   const [moved] = currentOrder.splice(fromIndex, 1);
-
   const insertIndex =
     position === 'after'
       ? toIndex + (fromIndex < toIndex ? -1 : 1)
@@ -97,31 +93,32 @@ app.post('/move', (req, res) => {
 });
 
 app.post('/order', (req, res) => {
-  const order = req.body.order;
+  const updated = req.body.order;
 
-  if (!Array.isArray(order)) {
+  console.log('SET ORDER:', updated);
+
+  if (!Array.isArray(updated)) {
     return res.status(400).send('Invalid order payload');
   }
 
-  // Полный сброс — вернуть порядок к изначальному
-  if (order.length === 0) {
-    state.order = items.map(({ id }) => id);
-    return res.sendStatus(200);
+  for (const item of updated) {
+    if (
+      typeof item !== 'object' ||
+      typeof item.index !== 'number' ||
+      typeof item.id !== 'number'
+    ) {
+      return res.status(400).send('Invalid item format');
+    }
   }
 
-  // Убедимся, что все id валидные числа и есть в оригинальных items
-  const itemIdsSet = new Set(items.map(({ id }) => id));
-  const allValid = order.every((id) => typeof id === 'number' && itemIdsSet.has(id));
-
-  if (!allValid) {
-    return res.status(400).send('Order contains invalid item IDs');
+  const newOrder = [...state.order];
+  for (const { index, id } of updated) {
+    newOrder[index] = id;
   }
 
-  // Установка нового порядка
-  state.order = order;
+  state.order = newOrder;
   res.sendStatus(200);
 });
-
 
 app.get('/order', (req, res) => {
   res.json(state.order);

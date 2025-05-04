@@ -3,6 +3,7 @@ import API from '../api/api';
 
 interface Item {
   id: number;
+  index: number; // неизменяемый индекс в исходном массиве
 }
 
 interface ItemResponse {
@@ -16,7 +17,7 @@ class TableStore {
   items: Item[] = [];
   total = 0;
   selected: number[] = [];
-  fullOrder: number[] = [];
+  fullOrder: Map<number, number> = new Map(); // ключ: index, значение: id
   offset = 0;
   limit = 20;
   search = '';
@@ -45,30 +46,30 @@ class TableStore {
         params: { offset: this.offset, limit: this.limit },
       });
 
+      console.log('📥 Получено с сервера:', res.data.items);
+
       runInAction(() => {
         const fetched = res.data.items;
-        const map = new Map(this.items.map(item => [item.id, item]));
-        fetched.forEach(item => map.set(item.id, item)); // обновим/добавим
-      
-        const merged = Array.from(map.values());
-      
-        const orderSet = new Set(this.fullOrder);
-        this.items = merged
-          .filter(item => orderSet.has(item.id))
-          .sort((a, b) => this.fullOrder.indexOf(a.id) - this.fullOrder.indexOf(b.id));
-      
+        const map = new Map(this.items.map(item => [item.index, item]));
+        fetched.forEach(item => map.set(item.index, item)); // обновим/добавим
+
+        this.items = Array.from(map.values())
+          .sort((a, b) => a.index - b.index);
+
         this.total = res.data.total;
         this.selected = res.data.selected;
         this.search = res.data.search;
         this.offset += this.limit;
-      
+
         if (reset && this.search === '') {
-          this.setFullOrder(this.items.map(item => item.id));
+          const orderMap = new Map<number, number>();
+          this.items.forEach(item => orderMap.set(item.index, item.id));
+          this.setFullOrder(orderMap);
         }
       });
-      
+
     } catch (error) {
-      console.error('Ошибка при загрузке:', error);
+      console.error('❌ Ошибка при загрузке:', error);
     } finally {
       runInAction(() => {
         this.isLoading = false;
@@ -78,12 +79,17 @@ class TableStore {
 
   async fetchFullOrder() {
     try {
-      const res = await API.get<number[]>('/order');
+      const res = await API.get<{ index: number; id: number }[]>('/order');
+      const orderMap = new Map<number, number>();
+      res.data.forEach(({ index, id }) => orderMap.set(index, id));
+
       runInAction(() => {
-        this.setFullOrder(res.data);
+        this.setFullOrder(orderMap);
       });
+
+      console.log('📥 Загружен полный порядок:', res.data);
     } catch (error) {
-      console.error('Ошибка при загрузке полного порядка:', error);
+      console.error('❌ Ошибка при загрузке порядка:', error);
     }
   }
 
@@ -97,9 +103,8 @@ class TableStore {
 
       await this.fetchFullOrder();
       await this.fetchItems(true);
-      
     } catch (error) {
-      console.error('Ошибка при установке поиска:', error);
+      console.error('❌ Ошибка при установке поиска:', error);
     }
   }
 
@@ -119,7 +124,7 @@ class TableStore {
     try {
       await API.post('/select', { selected });
     } catch (error) {
-      console.error('Ошибка при обновлении выбранных элементов:', error);
+      console.error('❌ Ошибка при обновлении выбранных:', error);
     }
   }
 
@@ -146,7 +151,7 @@ class TableStore {
         this.fetchItems(true),
       ]);
     } catch (error) {
-      console.error('Ошибка при сбросе:', error);
+      console.error('❌ Ошибка при сбросе:', error);
     }
   }
 
@@ -167,60 +172,62 @@ class TableStore {
 
   async moveItemById(fromId: number, toId: number, position: 'before' | 'after' = 'before') {
     try {
-      await API.post('/move', { fromId, toId, position });
+      const fromItem = this.items.find(i => i.id === fromId);
+      const toItem = this.items.find(i => i.id === toId);
+      if (!fromItem || !toItem) return;
 
-      const visibleIds = this.items.map(i => i.id);
-      const fullOrder = [...this.fullOrder];
+      //const { index: fromIndex } = fromItem;
+      //const { index: toIndex } = toItem;
 
-      const visiblePositions = fullOrder
-        .map((id, idx) => ({ id, idx }))
-        .filter(entry => visibleIds.includes(entry.id));
+      const newOrder = new Map(this.fullOrder);
 
-      const currentVisibleOrder = visiblePositions.map(v => v.id);
-      const fromIndex = currentVisibleOrder.indexOf(fromId);
-      const toIndex = currentVisibleOrder.indexOf(toId);
+      const indexes = Array.from(newOrder.keys()).sort((a, b) => a - b);
+      const currentIds = indexes.map(index => newOrder.get(index)!);
 
-      if (fromIndex === -1 || toIndex === -1) return;
+      const oldPos = currentIds.indexOf(fromId);
+      const newPos = currentIds.indexOf(toId);
 
-      const updatedVisibleOrder = [...currentVisibleOrder];
-      const [movedId] = updatedVisibleOrder.splice(fromIndex, 1);
-      const insertAt =
-        position === 'before'
-          ? fromIndex < toIndex ? toIndex - 1 : toIndex
-          : fromIndex < toIndex ? toIndex : toIndex + 1;
+      if (oldPos === -1 || newPos === -1) return;
 
-      updatedVisibleOrder.splice(insertAt, 0, movedId);
+      const updatedIds = [...currentIds];
+      const [movedId] = updatedIds.splice(oldPos, 1);
+      const insertAt = position === 'before'
+        ? (oldPos < newPos ? newPos - 1 : newPos)
+        : (oldPos < newPos ? newPos : newPos + 1);
 
-      const newFullOrder = [...fullOrder];
-      visiblePositions.forEach((entry, i) => {
-        newFullOrder[entry.idx] = updatedVisibleOrder[i];
-      });
+      updatedIds.splice(insertAt, 0, movedId);
+
+      const updatedOrderArray = indexes.map((index, i) => ({
+        index,
+        id: updatedIds[i],
+      }));
+
+      console.log('📤 Отправка нового порядка:', updatedOrderArray);
+
+      await this.setOrder(updatedOrderArray);
 
       runInAction(() => {
-        this.fullOrder = newFullOrder;
+        this.setFullOrder(new Map(updatedOrderArray.map(e => [e.index, e.id])));
 
         const itemMap = new Map(this.items.map(item => [item.id, item]));
-        this.items = newFullOrder
-          .filter(id => visibleIds.includes(id))
-          .map(id => itemMap.get(id)!)
-          .filter(Boolean);
+        this.items = updatedIds
+          .map(id => itemMap.get(id))
+          .filter(Boolean) as Item[];
       });
-
-      await this.setOrder(newFullOrder);
     } catch (error) {
-      console.error('Ошибка при перемещении:', error);
+      console.error('❌ Ошибка при перемещении:', error);
     }
   }
 
-  setFullOrder(order: number[]) {
+  setFullOrder(order: Map<number, number>) {
     this.fullOrder = order;
   }
 
-  async setOrder(order: number[]) {
+  async setOrder(order: { index: number; id: number }[]) {
     try {
       await API.post('/order', { order });
     } catch (error) {
-      console.error('Ошибка при обновлении порядка:', error);
+      console.error('❌ Ошибка при сохранении порядка:', error);
     }
   }
 }
