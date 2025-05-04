@@ -3,7 +3,6 @@ import { makeAutoObservable, runInAction } from 'mobx';
 
 interface Item {
   id: number;
-  index: number; // неизменяемый индекс в исходном массиве
 }
 
 interface ItemResponse {
@@ -17,7 +16,6 @@ class TableStore {
   items: Item[] = [];
   total = 0;
   selected: number[] = [];
-  fullOrder: Map<number, number> = new Map(); // ключ: index, значение: id
   offset = 0;
   limit = 20;
   search = '';
@@ -35,7 +33,6 @@ class TableStore {
 
     this.isLoading = true;
 
-    // Определение смещения для запроса
     const currentOffset = reset ? 0 : this.offset;
 
     try {
@@ -48,14 +45,12 @@ class TableStore {
       });
 
       runInAction(() => {
-        // Если выполняется сброс, перезаписываем элементы
         if (reset) {
           this.items = res.data.items;
         } else {
           this.items.push(...res.data.items);
         }
 
-        // Обновляем другие состояния
         this.total = res.data.total;
         this.selected = res.data.selected;
         this.search = res.data.search;
@@ -121,9 +116,7 @@ class TableStore {
         this.dropPosition = null;
       });
 
-      await Promise.all([
-        this.fetchItems(true),
-      ]);
+      await this.fetchItems(true);
     } catch (error) {
       console.error('Ошибка при сбросе:', error);
     }
@@ -145,27 +138,7 @@ class TableStore {
   }
 
   async moveItemById(fromId: number, toId: number, position: 'before' | 'after' = 'before') {
-    try {/*
-      const fromIndex = this.items.findIndex(item => item.id === fromId);
-      const toIndex = this.items.findIndex(item => item.id === toId);
-      if (fromIndex === -1 || toIndex === -1 || fromId === toId) return;
-  
-      // 🧠 Копируем список и удаляем fromId
-      const updatedItems = [...this.items];
-      const [movedItem] = updatedItems.splice(fromIndex, 1);
-  
-      // 🔢 Определяем индекс вставки
-      const insertIndex =
-        position === 'before'
-          ? (fromIndex < toIndex ? toIndex - 1 : toIndex)
-          : (fromIndex < toIndex ? toIndex : toIndex + 1);
-  
-      updatedItems.splice(insertIndex, 0, movedItem);
-
-      runInAction(() => {
-        this.items = updatedItems;
-      });*/
-
+    try {
       await this.setOrder(fromId, toId, position);
       await this.fetchItems(true);
     } catch (error) {
@@ -179,7 +152,7 @@ class TableStore {
       return;
     }
     try {
-      await API.post('/order', { fromId: fromId, toId: toId, position });
+      await API.post('/order', { fromId, toId, position });
     } catch (error) {
       console.error('Ошибка при сохранении порядка:', error);
     }

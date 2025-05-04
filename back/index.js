@@ -9,19 +9,19 @@ app.use(express.json());
 
 let state = {
   selected: [],
-  order: [], // Массив объектов: { index, id }
+  order: [], // Массив объектов: { id }
   search: ''
 };
 
 function generateItems(size) {
-  return Array.from({ length: size }, (_, i) => ({ id: i + 1, index: i }));
+  return Array.from({ length: size }, (_, i) => ({ id: i + 1 }));
 }
 
 const items = generateItems(1_000_000);
 
 // Инициализация порядка
 if (state.order.length === 0) {
-  state.order = items.map(({ index, id }) => ({ index, id }));
+  state.order = items.map(({ id }) => ({ id }));
 }
 
 app.get('/items', (req, res) => {
@@ -60,7 +60,8 @@ app.post('/order', (req, res) => {
   const { fromId, toId, position } = req.body;
 
   if (!fromId && !toId && !position) {
-    state.order = items.map(({ index, id }) => ({ index, id }));
+    // Reset to original order
+    state.order = items.map(({ id }) => ({ id }));
     return res.status(200).send('Order reset to initial');
   }
 
@@ -72,7 +73,6 @@ app.post('/order', (req, res) => {
     return res.status(400).send('Invalid move payload');
   }
 
-  // Находим индекс элемента по fromId и toId
   const fromIdx = state.order.findIndex(item => item.id === fromId);
   const toIdx = state.order.findIndex(item => item.id === toId);
 
@@ -80,26 +80,21 @@ app.post('/order', (req, res) => {
     return res.status(400).send('IDs not found');
   }
 
-  // Определяем границы диапазона, который нужно сдвинуть
   let start = Math.min(fromIdx, toIdx);
   let end = Math.max(fromIdx, toIdx);
-
-  const subrange = state.order.slice(start, end + 1); // Включительно
+  const subrange = state.order.slice(start, end + 1);
   const ids = subrange.map(item => item.id);
 
   if (fromIdx < toIdx) {
-    // Сдвиг вниз
-    const movedId = ids.shift(); // удалить fromId
+    const movedId = ids.shift();
     const insertPos = position === 'before' ? toIdx - start : toIdx - start + 1;
     ids.splice(insertPos, 0, movedId);
   } else {
-    // Сдвиг вверх
-    const movedId = ids.splice(fromIdx - start, 1)[0]; // удалить fromId
+    const movedId = ids.splice(fromIdx - start, 1)[0];
     const insertPos = position === 'before' ? toIdx - start : toIdx - start + 1;
     ids.splice(insertPos, 0, movedId);
   }
 
-  // Применяем новую последовательность id в order
   ids.forEach((id, i) => {
     state.order[start + i].id = id;
   });
