@@ -60,7 +60,6 @@ app.post('/order', (req, res) => {
   const { fromId, toId, position } = req.body;
 
   if (!fromId && !toId && !position) {
-    // Reset to original order
     state.order = items.map(({ id }) => ({ id }));
     return res.status(200).send('Order reset to initial');
   }
@@ -80,27 +79,19 @@ app.post('/order', (req, res) => {
     return res.status(400).send('IDs not found');
   }
 
-  let start = Math.min(fromIdx, toIdx);
-  let end = Math.max(fromIdx, toIdx);
-  const subrange = state.order.slice(start, end + 1);
-  const ids = subrange.map(item => item.id);
+  const [movedItem] = state.order.splice(fromIdx, 1);
 
-  if (fromIdx < toIdx) {
-    const movedId = ids.shift();
-    const insertPos = position === 'before' ? toIdx - start : toIdx - start + 1;
-    ids.splice(insertPos, 0, movedId);
-  } else {
-    const movedId = ids.splice(fromIdx - start, 1)[0];
-    const insertPos = position === 'before' ? toIdx - start : toIdx - start + 1;
-    ids.splice(insertPos, 0, movedId);
-  }
+  // Обновляем индекс после удаления
+  let insertIdx = toIdx;
+  if (fromIdx < toIdx) insertIdx--; // Сдвигаем на 1 влево, т.к. удалён элемент выше
 
-  ids.forEach((id, i) => {
-    state.order[start + i].id = id;
-  });
+  if (position === 'after') insertIdx += 1;
+
+  state.order.splice(insertIdx, 0, movedItem);
 
   res.sendStatus(200);
 });
+
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
