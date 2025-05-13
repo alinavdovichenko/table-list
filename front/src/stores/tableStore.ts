@@ -138,13 +138,36 @@ class TableStore {
   }
 
   async moveItemById(fromId: number, toId: number, position: 'before' | 'after' = 'before') {
-    try {
-      await this.setOrder(fromId, toId, position);
-      await this.fetchItems(true);
-    } catch (error) {
-      console.error('Ошибка при локальном перемещении:', error);
-    }
+  const fromIndex = this.items.findIndex(item => item.id === fromId);
+  const toIndex = this.items.findIndex(item => item.id === toId);
+
+  if (fromIndex === -1 || toIndex === -1) return;
+
+  const updated = [...this.items];
+  const [movedItem] = updated.splice(fromIndex, 1);
+
+  let insertIndex = toIndex;
+  if (position === 'after') {
+    insertIndex += fromIndex < toIndex ? 0 : 1;
+  } else {
+    insertIndex += fromIndex < toIndex ? -1 : 0;
   }
+
+  if (insertIndex < 0) insertIndex = 0;
+  if (insertIndex > updated.length) insertIndex = updated.length;
+
+  updated.splice(insertIndex, 0, movedItem);
+
+  runInAction(() => {
+    this.items = updated;
+  });
+
+  try {
+    await this.setOrder(fromId, toId, position);
+  } catch (error) {
+    console.error('Ошибка при сохранении порядка на сервере:', error);
+  }
+}
 
   async setOrder(fromId: number, toId: number, position: 'before' | 'after') {
     if (!fromId || !toId) {
